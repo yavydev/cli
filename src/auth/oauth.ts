@@ -45,7 +45,7 @@ export async function performOAuthLogin(): Promise<boolean> {
             grant_type: 'authorization_code',
             code,
             redirect_uri: `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`,
-            client_id: process.env.YAVY_CLIENT_ID ?? 'yavy-cli',
+            client_id: process.env.YAVY_CLIENT_ID ?? '01965e6a-0000-7000-8000-000000000001',
           }),
         });
 
@@ -77,7 +77,7 @@ export async function performOAuthLogin(): Promise<boolean> {
 
     server.listen(CALLBACK_PORT, () => {
       const authUrl = new URL('/oauth/authorize', YAVY_BASE_URL);
-      authUrl.searchParams.set('client_id', process.env.YAVY_CLIENT_ID ?? 'yavy-cli');
+      authUrl.searchParams.set('client_id', process.env.YAVY_CLIENT_ID ?? '01965e6a-0000-7000-8000-000000000001');
       authUrl.searchParams.set('redirect_uri', `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', '');
