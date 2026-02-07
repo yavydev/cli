@@ -1,0 +1,57 @@
+{
+  "name": "@yavydev/cli",
+  "version": "0.1.0",
+  "description": "Generate AI skills from your indexed documentation on Yavy",
+  "type": "module",
+  "bin": {
+    "yavy": "./bin/yavy.js"
+  },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "yavy",
+    "ai",
+    "ai",
+    "skills",
+    "documentation",
+    "cli"
+  ],
+  "author": {
+    "name": "Yavy",
+    "url": "https://yavy.dev"
+  },
+  "homepage": "https://github.com/yavydev/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yavydev/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yavydev/cli/issues"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^13.1.0",
+    "open": "^10.1.0",
+    "ora": "^8.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "license": "MIT"
+}
