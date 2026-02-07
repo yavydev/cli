@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { randomBytes, createHash } from 'node:crypto';
 import { URL } from 'node:url';
 import open from 'open';
 import { saveCredentials } from './store.js';
@@ -14,7 +15,18 @@ interface TokenResponse {
   token_type: string;
 }
 
+function generateCodeVerifier(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url');
+}
+
 export async function performOAuthLogin(): Promise<boolean> {
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+
   return new Promise((resolve) => {
     const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? '/', `http://localhost:${CALLBACK_PORT}`);
@@ -46,6 +58,7 @@ export async function performOAuthLogin(): Promise<boolean> {
             code,
             redirect_uri: `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`,
             client_id: process.env.YAVY_CLIENT_ID ?? '01965e6a-0000-7000-8000-000000000001',
+            code_verifier: codeVerifier,
           }),
         });
 
@@ -81,6 +94,8 @@ export async function performOAuthLogin(): Promise<boolean> {
       authUrl.searchParams.set('redirect_uri', `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', '');
+      authUrl.searchParams.set('code_challenge', codeChallenge);
+      authUrl.searchParams.set('code_challenge_method', 'S256');
 
       open(authUrl.toString());
     });
