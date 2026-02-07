@@ -1,60 +1,80 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '../config.js';
 
 export interface Credentials {
-  access_token: string;
-  refresh_token?: string;
-  expires_at?: string;
+    access_token: string;
+    refresh_token?: string;
+    expires_at?: string;
 }
 
 function credentialsPath(): string {
-  return join(homedir(), '.yavy', 'credentials.json');
-}
-
-function ensureDir(): void {
-  const dir = join(homedir(), '.yavy');
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+    return join(homedir(), '.yavy', 'credentials.json');
 }
 
 export function loadCredentials(): Credentials | null {
-  const path = credentialsPath();
-  if (!existsSync(path)) {
-    return null;
-  }
-  try {
-    const data = readFileSync(path, 'utf-8');
-    return JSON.parse(data) as Credentials;
-  } catch {
-    return null;
-  }
+    const path = credentialsPath();
+    if (!existsSync(path)) return null;
+    try {
+        return JSON.parse(readFileSync(path, 'utf-8')) as Credentials;
+    } catch {
+        return null;
+    }
 }
 
 export function saveCredentials(creds: Credentials): void {
-  ensureDir();
-  writeFileSync(credentialsPath(), JSON.stringify(creds, null, 2), { mode: 0o600 });
+    const dir = join(homedir(), '.yavy');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(credentialsPath(), JSON.stringify(creds, null, 2), { mode: 0o600 });
 }
 
 export function clearCredentials(): void {
-  const path = credentialsPath();
-  if (existsSync(path)) {
-    unlinkSync(path);
-  }
+    const path = credentialsPath();
+    if (existsSync(path)) unlinkSync(path);
 }
 
-export function getAccessToken(): string | null {
-  const creds = loadCredentials();
-  if (!creds) return null;
+function isExpired(creds: Credentials): boolean {
+    return !!creds.expires_at && new Date(creds.expires_at) <= new Date();
+}
 
-  // Check expiration if set
-  if (creds.expires_at) {
-    const expiresAt = new Date(creds.expires_at);
-    if (expiresAt <= new Date()) {
-      return null; // Token expired
+async function refreshToken(token: string): Promise<Credentials | null> {
+    try {
+        const response = await fetch(`${YAVY_BASE_URL}/oauth/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+                grant_type: 'refresh_token',
+                refresh_token: token,
+                client_id: YAVY_CLIENT_ID,
+            }),
+        });
+
+        if (!response.ok) return null;
+
+        const data = (await response.json()) as { access_token: string; refresh_token?: string; expires_in?: number };
+        const newCreds: Credentials = {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token ?? token,
+            expires_at: data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : undefined,
+        };
+
+        saveCredentials(newCreds);
+        return newCreds;
+    } catch {
+        return null;
     }
-  }
+}
 
-  return creds.access_token;
+export async function getAccessToken(): Promise<string | null> {
+    const creds = loadCredentials();
+    if (!creds) return null;
+
+    if (isExpired(creds)) {
+        if (!creds.refresh_token) return null;
+        const refreshed = await refreshToken(creds.refresh_token);
+        return refreshed?.access_token ?? null;
+    }
+
+    return creds.access_token;
 }

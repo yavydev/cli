@@ -37,20 +37,20 @@ Clears stored credentials.
 
 Lists all projects you have access to across your organizations.
 
-| Flag | Description |
-|------|-------------|
+| Flag     | Description    |
+| -------- | -------------- |
 | `--json` | Output as JSON |
 
 ### `yavy generate <org/project>`
 
 Generates a skill file from a project's indexed documentation.
 
-| Flag | Description |
-|------|-------------|
-| `--global` | Save to global skills directory (`~/.claude/skills/`) |
-| `--output <path>` | Custom output path |
-| `--force` | Force regeneration even if cached |
-| `--json` | Output as JSON |
+| Flag              | Description                                           |
+| ----------------- | ----------------------------------------------------- |
+| `--global`        | Save to global skills directory (`~/.claude/skills/`) |
+| `--output <path>` | Custom output path                                    |
+| `--force`         | Force regeneration even if cached                     |
+| `--json`          | Output as JSON                                        |
 
 By default, skills are saved to `.claude/skills/<project>/SKILL.md` in the current directory.
 
