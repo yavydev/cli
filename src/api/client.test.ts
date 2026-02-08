@@ -62,7 +62,7 @@ describe('listProjects', () => {
     });
 });
 
-describe('generateSkill', () => {
+describe('downloadSkill', () => {
     let client: YavyApiClient;
 
     beforeEach(async () => {
@@ -71,58 +71,62 @@ describe('generateSkill', () => {
         client = await YavyApiClient.create();
     });
 
-    it('sends POST to correct path', async () => {
-        const skill = { content: '# Skill', format: 'md', generated_at: '2024-01-01', token_count: 100 };
-        vi.mocked(fetch).mockResolvedValue(createMockResponse(skill));
+    it('sends GET to correct download path', async () => {
+        const mockBuffer = new ArrayBuffer(10);
+        vi.mocked(fetch).mockResolvedValue({
+            ok: true,
+            status: 200,
+            arrayBuffer: () => Promise.resolve(mockBuffer),
+            headers: new Headers(),
+        } as Response);
 
-        await client.generateSkill('my-org', 'my-project');
-
-        expect(fetch).toHaveBeenLastCalledWith(
-            'https://test.yavy.dev/api/v1/my-org/my-project/skill/generate',
-            expect.objectContaining({ method: 'POST' }),
-        );
-    });
-
-    it('sends { force: true } body when force=true', async () => {
-        vi.mocked(fetch).mockResolvedValue(createMockResponse({ content: '' }));
-
-        await client.generateSkill('org', 'proj', true);
-
-        const callArgs = vi.mocked(fetch).mock.calls[0];
-        const opts = callArgs[1] as RequestInit;
-        expect(JSON.parse(opts.body as string)).toEqual({ force: true });
-        expect(opts.headers).toHaveProperty('Content-Type', 'application/json');
-    });
-
-    it('sends no body when force=false', async () => {
-        vi.mocked(fetch).mockResolvedValue(createMockResponse({ content: '' }));
-
-        await client.generateSkill('org', 'proj', false);
-
-        const callArgs = vi.mocked(fetch).mock.calls[0];
-        const opts = callArgs[1] as RequestInit;
-        expect(opts.body).toBeUndefined();
-    });
-});
-
-describe('getSkill', () => {
-    it('sends GET to correct path with auth header', async () => {
-        vi.stubGlobal('fetch', vi.fn());
-        vi.mocked(getAccessToken).mockResolvedValue('test-token');
-        vi.mocked(fetch).mockResolvedValue(createMockResponse({ content: '# Skill' }));
-
-        const client = await YavyApiClient.create();
-        await client.getSkill('my-org', 'my-project');
+        await client.downloadSkill('my-org', 'my-project');
 
         expect(fetch).toHaveBeenLastCalledWith(
-            'https://test.yavy.dev/api/v1/my-org/my-project/skill',
+            'https://test.yavy.dev/api/v1/my-org/my-project/skill/download',
             expect.objectContaining({
                 method: 'GET',
                 headers: expect.objectContaining({
                     Authorization: 'Bearer test-token',
+                    Accept: 'application/zip',
                 }),
             }),
         );
+    });
+
+    it('returns ArrayBuffer from response', async () => {
+        const mockBuffer = new ArrayBuffer(10);
+        vi.mocked(fetch).mockResolvedValue({
+            ok: true,
+            status: 200,
+            arrayBuffer: () => Promise.resolve(mockBuffer),
+            headers: new Headers(),
+        } as Response);
+
+        const result = await client.downloadSkill('org', 'proj');
+        expect(result).toBe(mockBuffer);
+    });
+
+    it('throws on 401 response', async () => {
+        vi.mocked(fetch).mockResolvedValue({
+            ok: false,
+            status: 401,
+            json: () => Promise.resolve({}),
+            headers: new Headers(),
+        } as Response);
+
+        await expect(client.downloadSkill('org', 'proj')).rejects.toThrow('Authentication expired');
+    });
+
+    it('throws error message from JSON body on non-ok response', async () => {
+        vi.mocked(fetch).mockResolvedValue({
+            ok: false,
+            status: 422,
+            json: () => Promise.resolve({ error: 'Project has no indexed content' }),
+            headers: new Headers(),
+        } as Response);
+
+        await expect(client.downloadSkill('org', 'proj')).rejects.toThrow('Project has no indexed content');
     });
 });
 

@@ -12,18 +12,7 @@ export interface ApiProject {
     };
     pages_count: number;
     last_indexed_at: string | null;
-    has_skill: boolean;
-}
-
-export interface ApiSkill {
-    content: string;
-    format: string;
-    generated_at: string;
-    token_count: number;
-    project: {
-        name: string;
-        slug: string;
-    };
+    has_indexed_content: boolean;
 }
 
 export class YavyApiClient {
@@ -75,11 +64,25 @@ export class YavyApiClient {
         return result.data;
     }
 
-    async generateSkill(orgSlug: string, projectSlug: string, force = false): Promise<ApiSkill> {
-        return this.request<ApiSkill>('POST', `/${orgSlug}/${projectSlug}/skill/generate`, force ? { force: true } : undefined);
-    }
+    async downloadSkill(orgSlug: string, projectSlug: string): Promise<ArrayBuffer> {
+        const url = `${YAVY_BASE_URL}/api/v1/${orgSlug}/${projectSlug}/skill/download`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${this.token}`,
+                Accept: 'application/zip',
+            },
+        });
 
-    async getSkill(orgSlug: string, projectSlug: string): Promise<ApiSkill> {
-        return this.request<ApiSkill>('GET', `/${orgSlug}/${projectSlug}/skill`);
+        if (response.status === 401) {
+            throw new Error('Authentication expired. Run `yavy login` to re-authenticate.');
+        }
+
+        if (!response.ok) {
+            const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+            throw new Error(errorData.error ?? `API request failed with status ${response.status}`);
+        }
+
+        return response.arrayBuffer();
     }
 }

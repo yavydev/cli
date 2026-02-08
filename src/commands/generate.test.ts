@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { writeFileSync } from 'node:fs';
 import { generateCommand } from './generate.js';
 
 vi.mock('../api/client.js', () => ({
@@ -9,8 +8,8 @@ vi.mock('../api/client.js', () => ({
 }));
 
 vi.mock('../utils/paths.js', () => ({
-    getSkillOutputPath: vi.fn(() => '/mock/output/SKILL.md'),
-    ensureParentDir: vi.fn(),
+    getSkillOutputDir: vi.fn(() => '/mock/output/my-project'),
+    ensureDir: vi.fn(),
 }));
 
 vi.mock('../utils/output.js', () => ({
@@ -20,6 +19,15 @@ vi.mock('../utils/output.js', () => ({
 
 vi.mock('node:fs', () => ({
     writeFileSync: vi.fn(),
+    readFileSync: vi.fn(() => Buffer.from('')),
+    existsSync: vi.fn(() => false),
+    readdirSync: vi.fn(() => []),
+    rmSync: vi.fn(),
+    mkdirSync: vi.fn(),
+}));
+
+vi.mock('node:child_process', () => ({
+    execFileSync: vi.fn(),
 }));
 
 vi.mock('chalk', () => ({
@@ -38,20 +46,13 @@ vi.mock('ora', () => ({
 }));
 
 import { YavyApiClient } from '../api/client.js';
-import { getSkillOutputPath, ensureParentDir } from '../utils/paths.js';
+import { getSkillOutputDir } from '../utils/paths.js';
 import { error, success } from '../utils/output.js';
 
 function createMockClient() {
     return {
-        generateSkill: vi.fn().mockResolvedValue({
-            content: '# Skill Content',
-            format: 'md',
-            generated_at: '2024-01-01',
-            token_count: 500,
-            project: { name: 'My Project', slug: 'my-project' },
-        }),
+        downloadSkill: vi.fn().mockResolvedValue(new ArrayBuffer(100)),
         listProjects: vi.fn(),
-        getSkill: vi.fn(),
     };
 }
 
@@ -85,24 +86,13 @@ describe('generateCommand', () => {
         expect(process.exit).toHaveBeenCalledWith(1);
     });
 
-    it('calls generateSkill with correct org/project/force args', async () => {
-        const mockClient = createMockClient();
-        vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
-
-        await run(['my-org/my-project', '--force']);
-
-        expect(mockClient.generateSkill).toHaveBeenCalledWith('my-org', 'my-project', true);
-    });
-
-    it('writes skill content to computed output path', async () => {
+    it('calls downloadSkill with correct org/project args', async () => {
         const mockClient = createMockClient();
         vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
 
         await run(['my-org/my-project']);
 
-        expect(ensureParentDir).toHaveBeenCalledWith('/mock/output/SKILL.md');
-        expect(writeFileSync).toHaveBeenCalledWith('/mock/output/SKILL.md', '# Skill Content', 'utf-8');
-        expect(success).toHaveBeenCalled();
+        expect(mockClient.downloadSkill).toHaveBeenCalledWith('my-org', 'my-project');
     });
 
     it('outputs JSON when --json flag is used', async () => {
@@ -114,8 +104,8 @@ describe('generateCommand', () => {
         const logCall = vi.mocked(console.log).mock.calls[0][0] as string;
         const parsed = JSON.parse(logCall);
         expect(parsed).toHaveProperty('path');
-        expect(parsed).toHaveProperty('project');
-        expect(parsed).toHaveProperty('token_count');
+        expect(parsed).toHaveProperty('skill_file');
+        expect(parsed).toHaveProperty('reference_count');
     });
 
     it('shows error and exits on API failure', async () => {
@@ -127,13 +117,13 @@ describe('generateCommand', () => {
         expect(process.exit).toHaveBeenCalledWith(1);
     });
 
-    it('passes options to getSkillOutputPath', async () => {
+    it('passes options to getSkillOutputDir', async () => {
         const mockClient = createMockClient();
         vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
 
         await run(['my-org/my-project', '--global']);
 
-        expect(getSkillOutputPath).toHaveBeenCalledWith(
+        expect(getSkillOutputDir).toHaveBeenCalledWith(
             'my-project',
             expect.objectContaining({ global: true }),
         );

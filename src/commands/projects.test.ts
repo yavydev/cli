@@ -39,8 +39,7 @@ import { error } from '../utils/output.js';
 function createMockClient(projects: unknown[] = []) {
     return {
         listProjects: vi.fn().mockResolvedValue(projects),
-        generateSkill: vi.fn(),
-        getSkill: vi.fn(),
+        downloadSkill: vi.fn(),
     };
 }
 
@@ -72,7 +71,7 @@ describe('projectsCommand', () => {
                 organization: { name: 'My Org', slug: 'my-org' },
                 pages_count: 10,
                 last_indexed_at: '2024-01-01T00:00:00Z',
-                has_skill: true,
+                has_indexed_content: true,
             },
         ];
         vi.mocked(YavyApiClient.create).mockResolvedValue(createMockClient(projects) as unknown as YavyApiClient);
@@ -121,7 +120,7 @@ describe('projectsCommand', () => {
                 organization: { name: 'Org', slug: 'org' },
                 pages_count: 0,
                 last_indexed_at: null,
-                has_skill: false,
+                has_indexed_content: false,
             },
         ];
         vi.mocked(YavyApiClient.create).mockResolvedValue(createMockClient(projects) as unknown as YavyApiClient);

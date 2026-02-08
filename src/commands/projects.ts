@@ -37,9 +37,9 @@ export function projectsCommand(): Command {
                     const indexed = project.last_indexed_at
                         ? chalk.dim(`indexed ${new Date(project.last_indexed_at).toLocaleDateString()}`)
                         : chalk.yellow('not indexed');
-                    const skill = project.has_skill ? chalk.green(' [skill]') : '';
+                    const content = project.has_indexed_content ? chalk.green(' [indexed]') : '';
 
-                    console.log(`  ${org}${name}  ${pages}  ${indexed}${skill}`);
+                    console.log(`  ${org}${name}  ${pages}  ${indexed}${content}`);
                 }
 
                 console.log('');
