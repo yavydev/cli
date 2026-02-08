@@ -1,18 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { logoutCommand } from './logout.js';
+import { describe, expect, it, vi } from 'vitest';
+import { logoutCommand } from './logout';
 
-vi.mock('../auth/store.js', () => ({
+vi.mock('../auth/store', () => ({
     loadCredentials: vi.fn(),
     clearCredentials: vi.fn(),
 }));
 
-vi.mock('../utils/output.js', () => ({
+vi.mock('../utils/output', () => ({
     info: vi.fn(),
     success: vi.fn(),
 }));
 
-import { loadCredentials, clearCredentials } from '../auth/store.js';
-import { info, success } from '../utils/output.js';
+import { clearCredentials, loadCredentials } from '../auth/store';
+import { info, success } from '../utils/output';
 
 function run() {
     const cmd = logoutCommand();

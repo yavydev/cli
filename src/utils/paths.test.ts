@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { getSkillOutputDir, ensureDir, ensureParentDir } from './paths.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ensureDir, getSkillOutputDir, isPathSafe } from './paths';
 
 vi.mock('node:fs', () => ({
-    existsSync: vi.fn(),
     mkdirSync: vi.fn(),
 }));
 
@@ -34,23 +33,32 @@ describe('getSkillOutputDir', () => {
 });
 
 describe('ensureDir', () => {
-    it('calls mkdirSync with recursive when dir does not exist', () => {
-        vi.mocked(existsSync).mockReturnValue(false);
+    it('calls mkdirSync with recursive unconditionally', () => {
         ensureDir('/some/nested/dir');
         expect(mkdirSync).toHaveBeenCalledWith('/some/nested/dir', { recursive: true });
     });
-
-    it('skips mkdirSync when dir already exists', () => {
-        vi.mocked(existsSync).mockReturnValue(true);
-        ensureDir('/existing/dir');
-        expect(mkdirSync).not.toHaveBeenCalled();
-    });
 });
 
-describe('ensureParentDir', () => {
-    it('calls mkdirSync for parent directory', () => {
-        vi.mocked(existsSync).mockReturnValue(false);
-        ensureParentDir('/some/nested/dir/file.md');
-        expect(mkdirSync).toHaveBeenCalledWith('/some/nested/dir', { recursive: true });
+describe('isPathSafe', () => {
+    it('returns true for normal relative paths', () => {
+        expect(isPathSafe('SKILL.md', '/output')).toBe(true);
+        expect(isPathSafe('references/doc.md', '/output')).toBe(true);
+    });
+
+    it('returns false for paths with ../ traversal', () => {
+        expect(isPathSafe('../../../etc/passwd', '/output')).toBe(false);
+        expect(isPathSafe('references/../../secret.txt', '/output')).toBe(false);
+    });
+
+    it('returns false for paths with null bytes', () => {
+        expect(isPathSafe('file\0.md', '/output')).toBe(false);
+    });
+
+    it('returns true for deeply nested safe paths', () => {
+        expect(isPathSafe('a/b/c/d/file.md', '/output')).toBe(true);
+    });
+
+    it('returns false for absolute path escapes', () => {
+        expect(isPathSafe('/etc/passwd', '/output')).toBe(false);
     });
 });

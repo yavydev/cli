@@ -1,7 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '../config.js';
+import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '../config';
+
+const REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 
 export interface Credentials {
     access_token: string;
@@ -25,7 +27,7 @@ export function loadCredentials(): Credentials | null {
 
 export function saveCredentials(creds: Credentials): void {
     const dir = join(homedir(), '.yavy');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true });
     writeFileSync(credentialsPath(), JSON.stringify(creds, null, 2), { mode: 0o600 });
 }
 
@@ -34,8 +36,9 @@ export function clearCredentials(): void {
     if (existsSync(path)) unlinkSync(path);
 }
 
-function isExpired(creds: Credentials): boolean {
-    return !!creds.expires_at && new Date(creds.expires_at) <= new Date();
+export function isExpired(creds: Credentials): boolean {
+    if (!creds.expires_at) return false;
+    return new Date(creds.expires_at).getTime() - Date.now() <= REFRESH_BUFFER_MS;
 }
 
 async function refreshToken(token: string): Promise<Credentials | null> {

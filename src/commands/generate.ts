@@ -1,13 +1,11 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { unzipSync } from 'fflate';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, normalize } from 'node:path';
 import ora from 'ora';
-import { YavyApiClient } from '../api/client.js';
-import { error, success } from '../utils/output.js';
-import { ensureDir, getSkillOutputDir } from '../utils/paths.js';
+import { YavyApiClient } from '../api/client';
+import { ensureDir, error, getSkillOutputDir, isPathSafe, success, warn } from '../utils';
 
 export function generateCommand(): Command {
     return new Command('generate')
@@ -15,8 +13,9 @@ export function generateCommand(): Command {
         .argument('<org/project>', 'Organization and project slug (e.g., my-org/my-project)')
         .option('--global', 'Save to global skills directory (~/.claude/skills/)')
         .option('--output <path>', 'Custom output directory')
+        .option('--force', 'Overwrite existing skill files')
         .option('--json', 'Output as JSON')
-        .action(async (slug: string, options: { global?: boolean; output?: string; json?: boolean }) => {
+        .action(async (slug: string, options: { global?: boolean; output?: string; force?: boolean; json?: boolean }) => {
             const parts = slug.split('/');
             if (parts.length !== 2) {
                 error('Invalid slug format. Use: org-slug/project-slug');
@@ -24,14 +23,20 @@ export function generateCommand(): Command {
             }
 
             const [orgSlug, projectSlug] = parts;
+            const outputDir = getSkillOutputDir(projectSlug, options);
+
+            if (!options.force && existsSync(join(outputDir, 'SKILL.md'))) {
+                warn(`Skill files already exist at ${outputDir}. Use --force to overwrite.`);
+                process.exit(1);
+            }
+
             const spinner = options.json ? null : ora(`Downloading skill for ${chalk.bold(slug)}...`).start();
 
             try {
                 const client = await YavyApiClient.create();
                 const zipBuffer = await client.downloadSkill(orgSlug, projectSlug);
 
-                const outputDir = getSkillOutputDir(projectSlug, options);
-                extractZip(Buffer.from(zipBuffer), outputDir, projectSlug);
+                extractZip(new Uint8Array(zipBuffer), outputDir, projectSlug);
 
                 spinner?.stop();
 
@@ -65,42 +70,28 @@ export function generateCommand(): Command {
 }
 
 /**
- * Extract a zip buffer to the output directory.
+ * Extract a zip buffer to the output directory using fflate (pure JS, cross-platform).
  * Strips the top-level project-slug prefix from zip entries.
+ * Validates all paths to prevent zip-slip attacks.
  */
-function extractZip(zipBuffer: Buffer, outputDir: string, projectSlug: string): void {
-    const tmpZip = join(tmpdir(), `yavy-skill-${Date.now()}.zip`);
-    const tmpExtract = join(tmpdir(), `yavy-extract-${Date.now()}`);
+function extractZip(zipData: Uint8Array, outputDir: string, projectSlug: string): void {
+    const files = unzipSync(zipData);
+    const prefix = `${projectSlug}/`;
 
-    try {
-        writeFileSync(tmpZip, zipBuffer);
-        ensureDir(tmpExtract);
+    ensureDir(outputDir);
 
-        // execFileSync is safe from shell injection (no shell invoked)
-        execFileSync('unzip', ['-o', tmpZip, '-d', tmpExtract], { stdio: 'pipe' });
+    for (const [rawPath, data] of Object.entries(files)) {
+        if (rawPath.endsWith('/')) continue;
 
-        const prefixDir = join(tmpExtract, projectSlug);
-        const sourceDir = existsSync(prefixDir) ? prefixDir : tmpExtract;
+        const relativePath = rawPath.startsWith(prefix) ? rawPath.slice(prefix.length) : rawPath;
+        const normalizedPath = normalize(relativePath);
 
-        ensureDir(outputDir);
-        copyDirRecursive(sourceDir, outputDir);
-    } finally {
-        rmSync(tmpZip, { force: true });
-        rmSync(tmpExtract, { recursive: true, force: true });
-    }
-}
-
-function copyDirRecursive(src: string, dest: string): void {
-    ensureDir(dest);
-
-    for (const entry of readdirSync(src, { withFileTypes: true })) {
-        const srcPath = join(src, entry.name);
-        const destPath = join(dest, entry.name);
-
-        if (entry.isDirectory()) {
-            copyDirRecursive(srcPath, destPath);
-        } else {
-            writeFileSync(destPath, readFileSync(srcPath));
+        if (!isPathSafe(normalizedPath, outputDir)) {
+            throw new Error(`Zip contains unsafe path: ${rawPath}`);
         }
+
+        const destPath = join(outputDir, normalizedPath);
+        ensureDir(dirname(destPath));
+        writeFileSync(destPath, data);
     }
 }

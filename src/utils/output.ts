@@ -8,7 +8,10 @@ export function error(message: string): void {
     console.error(chalk.red('✗') + ' ' + message);
 }
 
+export function warn(message: string): void {
+    console.error(chalk.yellow('⚠') + ' ' + message);
+}
+
 export function info(message: string): void {
     console.log(chalk.blue('ℹ') + ' ' + message);
 }
-

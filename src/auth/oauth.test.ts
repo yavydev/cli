@@ -1,49 +1,49 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createMockResponse } from '../__test__/helpers.js';
+import type { AddressInfo } from 'node:net';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockResponse } from '../__test__/helpers';
 
 vi.mock('open', () => ({
     default: vi.fn(),
 }));
 
-vi.mock('./store.js', () => ({
+vi.mock('./store', () => ({
     saveCredentials: vi.fn(),
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_CLIENT_ID: 'test-client-id',
 }));
 
 import openBrowser from 'open';
-import { saveCredentials } from './store.js';
+import { saveCredentials } from './store';
 
-// We'll capture the request handler and simulate requests instead of using real HTTP
 let requestHandler: (req: IncomingMessage, res: ServerResponse) => void;
-let listenCallback: () => void;
 let serverClosed: boolean;
-let closeCallback: (() => void) | undefined;
+let mockPort: number;
 
 vi.mock('node:http', () => ({
     createServer: vi.fn((handler: (req: IncomingMessage, res: ServerResponse) => void) => {
         requestHandler = handler;
         serverClosed = false;
-        return {
-            listen: vi.fn((_port: number, cb: () => void) => {
-                listenCallback = cb;
-                // Call listen callback asynchronously to match real behavior
+        const server = {
+            listen: vi.fn((port: number, cb: () => void) => {
+                mockPort = port === 0 ? 44321 : port;
                 setTimeout(cb, 0);
             }),
             close: vi.fn((cb?: () => void) => {
                 serverClosed = true;
-                closeCallback = cb;
                 cb?.();
             }),
+            address: vi.fn(() => ({ port: mockPort }) as AddressInfo),
+            once: vi.fn(),
+            removeListener: vi.fn(),
         };
+        return server;
     }),
 }));
 
-// Simulate an incoming request to the handler
 function simulateRequest(urlPath: string): { statusCode: number; body: string; headers: Record<string, string> } {
     const result = { statusCode: 200, body: '', headers: {} as Record<string, string> };
     const mockReq = { url: urlPath } as IncomingMessage;
@@ -61,17 +61,14 @@ function simulateRequest(urlPath: string): { statusCode: number; body: string; h
     return result;
 }
 
-// Need dynamic import after mocks are set up
-let performOAuthLogin: typeof import('./oauth.js').performOAuthLogin;
+let performOAuthLogin: typeof import('./oauth').performOAuthLogin;
 
 beforeEach(async () => {
     vi.clearAllMocks();
-    // Reset shared mock state
     requestHandler = undefined as any;
-    listenCallback = undefined as any;
     serverClosed = false;
-    closeCallback = undefined;
-    const mod = await import('./oauth.js');
+    mockPort = 9876;
+    const mod = await import('./oauth');
     performOAuthLogin = mod.performOAuthLogin;
 });
 
@@ -80,7 +77,7 @@ describe('performOAuthLogin', () => {
         vi.stubGlobal('fetch', vi.fn());
     });
 
-    it('opens browser with correct authorization URL containing PKCE', async () => {
+    it('opens browser with correct authorization URL containing PKCE and state', async () => {
         vi.mocked(fetch).mockResolvedValue(
             createMockResponse({
                 access_token: 'tok',
@@ -91,7 +88,6 @@ describe('performOAuthLogin', () => {
         );
 
         const loginPromise = performOAuthLogin();
-        // Let listen callback fire
         await new Promise((r) => setTimeout(r, 50));
 
         expect(openBrowser).toHaveBeenCalledOnce();
@@ -102,11 +98,11 @@ describe('performOAuthLogin', () => {
         expect(url.searchParams.get('response_type')).toBe('code');
         expect(url.searchParams.get('code_challenge_method')).toBe('S256');
         expect(url.searchParams.get('code_challenge')).toBeTruthy();
-        expect(url.searchParams.get('redirect_uri')).toBe('http://localhost:9876/callback');
+        expect(url.searchParams.get('state')).toBeTruthy();
+        expect(url.searchParams.has('scope')).toBe(false);
 
-        // Simulate callback with auth code
-        simulateRequest('/callback?code=auth-code-123');
-        // Let the async token exchange resolve
+        const state = url.searchParams.get('state');
+        simulateRequest(`/callback?code=auth-code-123&state=${state}`);
         await new Promise((r) => setTimeout(r, 50));
         const result = await loginPromise;
         expect(result).toBe(true);
@@ -125,7 +121,10 @@ describe('performOAuthLogin', () => {
         const loginPromise = performOAuthLogin();
         await new Promise((r) => setTimeout(r, 50));
 
-        simulateRequest('/callback?code=test-code');
+        const url = new URL(vi.mocked(openBrowser).mock.calls[0][0] as string);
+        const state = url.searchParams.get('state');
+
+        simulateRequest(`/callback?code=test-code&state=${state}`);
         await new Promise((r) => setTimeout(r, 50));
         await loginPromise;
 
@@ -157,7 +156,10 @@ describe('performOAuthLogin', () => {
         const loginPromise = performOAuthLogin();
         await new Promise((r) => setTimeout(r, 50));
 
-        simulateRequest('/callback?code=test-code');
+        const url = new URL(vi.mocked(openBrowser).mock.calls[0][0] as string);
+        const state = url.searchParams.get('state');
+
+        simulateRequest(`/callback?code=test-code&state=${state}`);
         await new Promise((r) => setTimeout(r, 50));
         await loginPromise;
 
@@ -187,20 +189,35 @@ describe('performOAuthLogin', () => {
         expect(result).toBe(false);
     });
 
+    it('returns false when state parameter does not match (CSRF protection)', async () => {
+        const loginPromise = performOAuthLogin();
+        await new Promise((r) => setTimeout(r, 50));
+
+        const response = simulateRequest('/callback?code=test-code&state=wrong-state');
+        expect(response.body).toContain('Invalid state parameter');
+
+        const result = await loginPromise;
+        expect(result).toBe(false);
+    });
+
     it('returns false when token exchange returns non-ok response', async () => {
-        vi.spyOn(console, 'error').mockImplementation(() => {});
         vi.mocked(fetch).mockResolvedValue(createMockResponse({}, 400));
 
         const loginPromise = performOAuthLogin();
         await new Promise((r) => setTimeout(r, 50));
 
-        simulateRequest('/callback?code=bad-code');
+        const url = new URL(vi.mocked(openBrowser).mock.calls[0][0] as string);
+        const state = url.searchParams.get('state');
+
+        simulateRequest(`/callback?code=bad-code&state=${state}`);
         await new Promise((r) => setTimeout(r, 50));
         const result = await loginPromise;
         expect(result).toBe(false);
     });
 
     it('returns 404 for non-callback paths', async () => {
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ access_token: 'tok', token_type: 'Bearer' }));
+
         const loginPromise = performOAuthLogin();
         await new Promise((r) => setTimeout(r, 50));
 
@@ -208,11 +225,9 @@ describe('performOAuthLogin', () => {
         expect(response.statusCode).toBe(404);
         expect(response.body).toBe('Not found');
 
-        // Clean up: trigger callback to resolve the promise
-        vi.mocked(fetch).mockResolvedValue(
-            createMockResponse({ access_token: 'tok', token_type: 'Bearer' }),
-        );
-        simulateRequest('/callback?code=cleanup');
+        const url = new URL(vi.mocked(openBrowser).mock.calls[0][0] as string);
+        const state = url.searchParams.get('state');
+        simulateRequest(`/callback?code=cleanup&state=${state}`);
         await new Promise((r) => setTimeout(r, 50));
         await loginPromise;
     });
@@ -228,5 +243,31 @@ describe('performOAuthLogin', () => {
         expect(result).toBe(false);
 
         vi.useRealTimers();
+    });
+
+    it('includes redirect_uri with correct port in token exchange', async () => {
+        vi.mocked(fetch).mockResolvedValue(
+            createMockResponse({
+                access_token: 'tok',
+                token_type: 'Bearer',
+            }),
+        );
+
+        const loginPromise = performOAuthLogin();
+        await new Promise((r) => setTimeout(r, 50));
+
+        const url = new URL(vi.mocked(openBrowser).mock.calls[0][0] as string);
+        const state = url.searchParams.get('state');
+        const redirectUri = url.searchParams.get('redirect_uri');
+
+        expect(redirectUri).toContain('localhost');
+        expect(redirectUri).toContain('/callback');
+
+        simulateRequest(`/callback?code=test&state=${state}`);
+        await new Promise((r) => setTimeout(r, 50));
+        await loginPromise;
+
+        const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+        expect(body.redirect_uri).toBe(redirectUri);
     });
 });

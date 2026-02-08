@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { success, error, info } from './output.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { error, info, success, warn } from './output';
 
 vi.mock('chalk', () => ({
     default: {
         green: (s: string) => s,
         red: (s: string) => s,
         blue: (s: string) => s,
+        yellow: (s: string) => s,
     },
 }));
 
@@ -28,6 +29,12 @@ describe('output utilities', () => {
         expect(console.error).toHaveBeenCalledWith(expect.stringContaining('it failed'));
     });
 
+    it('warn() calls console.error with message', () => {
+        warn('be careful');
+        expect(console.error).toHaveBeenCalledOnce();
+        expect(console.error).toHaveBeenCalledWith(expect.stringContaining('be careful'));
+    });
+
     it('info() calls console.log with message', () => {
         info('some info');
         expect(console.log).toHaveBeenCalledOnce();
@@ -44,6 +51,12 @@ describe('output utilities', () => {
         error('oops');
         const call = vi.mocked(console.error).mock.calls[0][0] as string;
         expect(call).toContain('✗');
+    });
+
+    it('warn() includes warning symbol', () => {
+        warn('heads up');
+        const call = vi.mocked(console.error).mock.calls[0][0] as string;
+        expect(call).toContain('⚠');
     });
 
     it('info() includes info symbol', () => {

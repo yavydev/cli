@@ -1,20 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateCommand } from './generate.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { generateCommand } from './generate';
 
-vi.mock('../api/client.js', () => ({
+vi.mock('../api/client', () => ({
     YavyApiClient: {
         create: vi.fn(),
     },
 }));
 
-vi.mock('../utils/paths.js', () => ({
+vi.mock('../utils/paths', () => ({
     getSkillOutputDir: vi.fn(() => '/mock/output/my-project'),
     ensureDir: vi.fn(),
+    isPathSafe: vi.fn(() => true),
 }));
 
-vi.mock('../utils/output.js', () => ({
+vi.mock('../utils/output', () => ({
     error: vi.fn(),
     success: vi.fn(),
+    warn: vi.fn(),
 }));
 
 vi.mock('node:fs', () => ({
@@ -22,12 +24,15 @@ vi.mock('node:fs', () => ({
     readFileSync: vi.fn(() => Buffer.from('')),
     existsSync: vi.fn(() => false),
     readdirSync: vi.fn(() => []),
-    rmSync: vi.fn(),
     mkdirSync: vi.fn(),
 }));
 
-vi.mock('node:child_process', () => ({
-    execFileSync: vi.fn(),
+vi.mock('fflate', () => ({
+    unzipSync: vi.fn(() => ({
+        'my-project/SKILL.md': new Uint8Array([72, 101, 108, 108, 111]),
+        'my-project/references/doc.md': new Uint8Array([68, 111, 99]),
+        'my-project/': new Uint8Array(0), // directory entry
+    })),
 }));
 
 vi.mock('chalk', () => ({
@@ -45,9 +50,10 @@ vi.mock('ora', () => ({
     })),
 }));
 
-import { YavyApiClient } from '../api/client.js';
-import { getSkillOutputDir } from '../utils/paths.js';
-import { error, success } from '../utils/output.js';
+import { existsSync } from 'node:fs';
+import { YavyApiClient } from '../api/client';
+import { error, warn } from '../utils/output';
+import { getSkillOutputDir, isPathSafe } from '../utils/paths';
 
 function createMockClient() {
     return {
@@ -123,9 +129,46 @@ describe('generateCommand', () => {
 
         await run(['my-org/my-project', '--global']);
 
-        expect(getSkillOutputDir).toHaveBeenCalledWith(
-            'my-project',
-            expect.objectContaining({ global: true }),
-        );
+        expect(getSkillOutputDir).toHaveBeenCalledWith('my-project', expect.objectContaining({ global: true }));
+    });
+
+    it('warns and exits when skill exists without --force', async () => {
+        vi.mocked(existsSync).mockReturnValue(true);
+
+        await run(['my-org/my-project']);
+
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('already exist'));
+        expect(process.exit).toHaveBeenCalledWith(1);
+    });
+
+    it('overwrites existing skill when --force is used', async () => {
+        vi.mocked(existsSync).mockReturnValue(true);
+        const mockClient = createMockClient();
+        vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
+
+        await run(['my-org/my-project', '--force']);
+
+        expect(mockClient.downloadSkill).toHaveBeenCalled();
+        expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('throws on unsafe zip paths (zip-slip protection)', async () => {
+        vi.mocked(isPathSafe).mockReturnValue(false);
+        const mockClient = createMockClient();
+        vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
+
+        await run(['my-org/my-project']);
+
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('unsafe path'));
+        expect(process.exit).toHaveBeenCalledWith(1);
+    });
+
+    it('passes --output flag to getSkillOutputDir', async () => {
+        const mockClient = createMockClient();
+        vi.mocked(YavyApiClient.create).mockResolvedValue(mockClient as unknown as YavyApiClient);
+
+        await run(['my-org/my-project', '--output', '/custom/path']);
+
+        expect(getSkillOutputDir).toHaveBeenCalledWith('my-project', expect.objectContaining({ output: '/custom/path' }));
     });
 });

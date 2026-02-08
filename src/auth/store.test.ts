@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { createMockResponse } from '../__test__/helpers.js';
-import { loadCredentials, saveCredentials, clearCredentials, getAccessToken, type Credentials } from './store.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMockResponse } from '../__test__/helpers';
+import { clearCredentials, getAccessToken, isExpired, loadCredentials, saveCredentials, type Credentials } from './store';
 
 vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('node:os', () => ({
     homedir: vi.fn(() => '/mock-home'),
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_CLIENT_ID: 'test-client-id',
 }));
@@ -45,27 +45,15 @@ describe('loadCredentials', () => {
 });
 
 describe('saveCredentials', () => {
-    it('creates ~/.yavy directory if it does not exist', () => {
-        vi.mocked(existsSync).mockReturnValue(false);
+    it('creates ~/.yavy directory with recursive', () => {
         saveCredentials({ access_token: 'tok' });
         expect(mkdirSync).toHaveBeenCalledWith('/mock-home/.yavy', { recursive: true });
     });
 
     it('writes JSON with mode 0o600', () => {
-        vi.mocked(existsSync).mockReturnValue(true);
         const creds: Credentials = { access_token: 'tok' };
         saveCredentials(creds);
-        expect(writeFileSync).toHaveBeenCalledWith(
-            '/mock-home/.yavy/credentials.json',
-            JSON.stringify(creds, null, 2),
-            { mode: 0o600 },
-        );
-    });
-
-    it('skips mkdir when directory already exists', () => {
-        vi.mocked(existsSync).mockReturnValue(true);
-        saveCredentials({ access_token: 'tok' });
-        expect(mkdirSync).not.toHaveBeenCalled();
+        expect(writeFileSync).toHaveBeenCalledWith('/mock-home/.yavy/credentials.json', JSON.stringify(creds, null, 2), { mode: 0o600 });
     });
 });
 
@@ -83,6 +71,27 @@ describe('clearCredentials', () => {
     });
 });
 
+describe('isExpired', () => {
+    it('returns false when no expires_at field', () => {
+        expect(isExpired({ access_token: 'tok' })).toBe(false);
+    });
+
+    it('returns false when token is fresh (well before expiry)', () => {
+        const future = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
+        expect(isExpired({ access_token: 'tok', expires_at: future })).toBe(false);
+    });
+
+    it('returns true when token is within 5 min buffer of expiry', () => {
+        const nearFuture = new Date(Date.now() + 3 * 60 * 1000).toISOString(); // 3 min from now
+        expect(isExpired({ access_token: 'tok', expires_at: nearFuture })).toBe(true);
+    });
+
+    it('returns true when token is already past expiry', () => {
+        const past = new Date(Date.now() - 3600 * 1000).toISOString();
+        expect(isExpired({ access_token: 'tok', expires_at: past })).toBe(true);
+    });
+});
+
 describe('getAccessToken', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -97,59 +106,53 @@ describe('getAccessToken', () => {
     it('returns access_token when not expired', async () => {
         const future = new Date(Date.now() + 3600 * 1000).toISOString();
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'valid-tok', expires_at: future }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'valid-tok', expires_at: future }));
         expect(await getAccessToken()).toBe('valid-tok');
     });
 
     it('returns access_token when no expires_at field', async () => {
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'no-expiry-tok' }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'no-expiry-tok' }));
         expect(await getAccessToken()).toBe('no-expiry-tok');
     });
 
     it('returns null when expired with no refresh_token', async () => {
         const past = new Date(Date.now() - 3600 * 1000).toISOString();
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'expired-tok', expires_at: past }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'expired-tok', expires_at: past }));
         expect(await getAccessToken()).toBeNull();
     });
 
     it('refreshes token when expired with refresh_token', async () => {
         const past = new Date(Date.now() - 3600 * 1000).toISOString();
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }));
 
-        vi.mocked(fetch).mockResolvedValue(
-            createMockResponse({ access_token: 'new-tok', refresh_token: 'new-ref', expires_in: 3600 }),
-        );
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ access_token: 'new-tok', refresh_token: 'new-ref', expires_in: 3600 }));
 
         const token = await getAccessToken();
         expect(token).toBe('new-tok');
-        expect(fetch).toHaveBeenCalledWith(
-            'https://test.yavy.dev/oauth/token',
-            expect.objectContaining({ method: 'POST' }),
-        );
-        expect(writeFileSync).toHaveBeenCalledWith(
-            '/mock-home/.yavy/credentials.json',
-            expect.stringContaining('"access_token": "new-tok"'),
-            { mode: 0o600 },
-        );
+        expect(fetch).toHaveBeenCalledWith('https://test.yavy.dev/oauth/token', expect.objectContaining({ method: 'POST' }));
+        expect(writeFileSync).toHaveBeenCalledWith('/mock-home/.yavy/credentials.json', expect.stringContaining('"access_token": "new-tok"'), {
+            mode: 0o600,
+        });
+    });
+
+    it('proactively refreshes when within 5 min buffer', async () => {
+        const nearExpiry = new Date(Date.now() + 2 * 60 * 1000).toISOString(); // 2 min left
+        vi.mocked(existsSync).mockReturnValue(true);
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'almost-expired', refresh_token: 'ref-tok', expires_at: nearExpiry }));
+
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ access_token: 'refreshed-tok', refresh_token: 'new-ref', expires_in: 3600 }));
+
+        const token = await getAccessToken();
+        expect(token).toBe('refreshed-tok');
     });
 
     it('returns null when refresh fails with non-ok response', async () => {
         const past = new Date(Date.now() - 3600 * 1000).toISOString();
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }));
 
         vi.mocked(fetch).mockResolvedValue(createMockResponse({}, 401));
         expect(await getAccessToken()).toBeNull();
@@ -158,9 +161,7 @@ describe('getAccessToken', () => {
     it('returns null when refresh throws network error', async () => {
         const past = new Date(Date.now() - 3600 * 1000).toISOString();
         vi.mocked(existsSync).mockReturnValue(true);
-        vi.mocked(readFileSync).mockReturnValue(
-            JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }),
-        );
+        vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ access_token: 'old', refresh_token: 'ref-tok', expires_at: past }));
 
         vi.mocked(fetch).mockRejectedValue(new Error('Network error'));
         expect(await getAccessToken()).toBeNull();
