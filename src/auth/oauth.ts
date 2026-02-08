@@ -99,12 +99,13 @@ export async function performOAuthLogin(): Promise<boolean> {
         });
 
         // Timeout after 5 minutes
-        setTimeout(
+        const timeout = setTimeout(
             () => {
                 server.close();
                 resolve(false);
             },
             5 * 60 * 1000,
         );
+        timeout.unref();
     });
 }

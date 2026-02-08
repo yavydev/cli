@@ -20,6 +20,7 @@ export function loginCommand(): Command {
 
             if (result) {
                 success('Successfully logged in to Yavy!');
+                process.exit(0);
             } else {
                 error('Login failed. Please try again.');
                 process.exit(1);
