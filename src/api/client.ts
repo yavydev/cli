@@ -1,5 +1,5 @@
-import { getAccessToken } from '../auth/store.js';
-import { YAVY_BASE_URL } from '../config.js';
+import { getAccessToken } from '../auth/store';
+import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '../config';
 
 export interface ApiProject {
     id: number;
@@ -13,6 +13,19 @@ export interface ApiProject {
     pages_count: number;
     last_indexed_at: string | null;
     has_indexed_content: boolean;
+}
+
+const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
+
+function isRetryable(error: unknown, status?: number): boolean {
+    if (status && RETRYABLE_STATUS_CODES.has(status)) return true;
+    if (error instanceof TypeError) return true; // fetch network errors
+    if (error instanceof DOMException && error.name === 'AbortError') return false;
+    return false;
+}
+
+async function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export class YavyApiClient {
@@ -30,30 +43,71 @@ export class YavyApiClient {
         return new YavyApiClient(token);
     }
 
+    private baseHeaders(accept = 'application/json'): Record<string, string> {
+        return {
+            Authorization: `Bearer ${this.token}`,
+            Accept: accept,
+            'User-Agent': YAVY_USER_AGENT,
+        };
+    }
+
+    private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+        let lastError: unknown;
+
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                const delay = Math.min(1000 * 2 ** (attempt - 1), 10_000);
+                const jitter = Math.random() * delay * 0.1;
+                await sleep(delay + jitter);
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+            try {
+                const response = await fetch(url, { ...init, signal: controller.signal });
+
+                if (response.ok || response.status === 401 || !isRetryable(null, response.status)) {
+                    return response;
+                }
+
+                lastError = new Error(`HTTP ${response.status}`);
+            } catch (err) {
+                if (!isRetryable(err)) throw err;
+                lastError = err;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        throw lastError;
+    }
+
+    private async handleErrorResponse(response: Response): Promise<never> {
+        if (response.status === 401) {
+            throw new Error('Authentication expired. Run `yavy login` to re-authenticate.');
+        }
+
+        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorData.error ?? `API request failed with status ${response.status}`);
+    }
+
     private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
         const url = `${YAVY_BASE_URL}/api/v1${path}`;
-        const headers: Record<string, string> = {
-            Authorization: `Bearer ${this.token}`,
-            Accept: 'application/json',
-        };
+        const headers: Record<string, string> = { ...this.baseHeaders() };
 
         if (body) {
             headers['Content-Type'] = 'application/json';
         }
 
-        const response = await fetch(url, {
+        const response = await this.fetchWithRetry(url, {
             method,
             headers,
             body: body ? JSON.stringify(body) : undefined,
         });
 
-        if (response.status === 401) {
-            throw new Error('Authentication expired. Run `yavy login` to re-authenticate.');
-        }
-
         if (!response.ok) {
-            const errorData = (await response.json().catch(() => ({}))) as { error?: string };
-            throw new Error(errorData.error ?? `API request failed with status ${response.status}`);
+            await this.handleErrorResponse(response);
         }
 
         return response.json() as Promise<T>;
@@ -66,21 +120,14 @@ export class YavyApiClient {
 
     async downloadSkill(orgSlug: string, projectSlug: string): Promise<ArrayBuffer> {
         const url = `${YAVY_BASE_URL}/api/v1/${orgSlug}/${projectSlug}/skill/download`;
-        const response = await fetch(url, {
+
+        const response = await this.fetchWithRetry(url, {
             method: 'GET',
-            headers: {
-                Authorization: `Bearer ${this.token}`,
-                Accept: 'application/zip',
-            },
+            headers: this.baseHeaders('application/zip'),
         });
 
-        if (response.status === 401) {
-            throw new Error('Authentication expired. Run `yavy login` to re-authenticate.');
-        }
-
         if (!response.ok) {
-            const errorData = (await response.json().catch(() => ({}))) as { error?: string };
-            throw new Error(errorData.error ?? `API request failed with status ${response.status}`);
+            await this.handleErrorResponse(response);
         }
 
         return response.arrayBuffer();

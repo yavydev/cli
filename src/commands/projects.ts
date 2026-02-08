@@ -1,9 +1,9 @@
 import chalk from 'chalk';
 import { Command } from 'commander';
 import ora from 'ora';
-import { YavyApiClient } from '../api/client.js';
-import { YAVY_BASE_URL } from '../config.js';
-import { error } from '../utils/output.js';
+import { YavyApiClient } from '../api/client';
+import { YAVY_BASE_URL } from '../config';
+import { error } from '../utils';
 
 export function projectsCommand(): Command {
     return new Command('projects')

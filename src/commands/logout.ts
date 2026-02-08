@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { clearCredentials, loadCredentials } from '../auth/store.js';
-import { info, success } from '../utils/output.js';
+import { clearCredentials, loadCredentials } from '../auth/store';
+import { info, success } from '../utils';
 
 export function logoutCommand(): Command {
     return new Command('logout').description('Log out of your Yavy account').action(() => {

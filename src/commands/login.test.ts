@@ -1,18 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { loginCommand } from './login.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { loginCommand } from './login';
 
-vi.mock('../auth/oauth.js', () => ({
+vi.mock('../auth/oauth', () => ({
     performOAuthLogin: vi.fn(),
 }));
 
-vi.mock('../auth/store.js', () => ({
+vi.mock('../auth/store', () => ({
     loadCredentials: vi.fn(),
+    isExpired: vi.fn(),
 }));
 
-vi.mock('../utils/output.js', () => ({
+vi.mock('../utils/output', () => ({
     error: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
+    warn: vi.fn(),
 }));
 
 vi.mock('ora', () => ({
@@ -23,9 +25,9 @@ vi.mock('ora', () => ({
     })),
 }));
 
-import { performOAuthLogin } from '../auth/oauth.js';
-import { loadCredentials } from '../auth/store.js';
-import { info, success, error } from '../utils/output.js';
+import { performOAuthLogin } from '../auth/oauth';
+import { isExpired, loadCredentials } from '../auth/store';
+import { error, info, success, warn } from '../utils/output';
 
 async function run() {
     const cmd = loginCommand();
@@ -44,13 +46,25 @@ describe('loginCommand', () => {
         vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     });
 
-    it('skips OAuth when already logged in', async () => {
+    it('skips OAuth when already logged in with valid token', async () => {
         vi.mocked(loadCredentials).mockReturnValue({ access_token: 'existing-tok' });
+        vi.mocked(isExpired).mockReturnValue(false);
 
         await run();
 
         expect(info).toHaveBeenCalledWith(expect.stringContaining('already logged in'));
         expect(performOAuthLogin).not.toHaveBeenCalled();
+    });
+
+    it('shows warning and re-authenticates when token is expired', async () => {
+        vi.mocked(loadCredentials).mockReturnValue({ access_token: 'old-tok', expires_at: '2020-01-01' });
+        vi.mocked(isExpired).mockReturnValue(true);
+        vi.mocked(performOAuthLogin).mockResolvedValue(true);
+
+        await run();
+
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('expired'));
+        expect(performOAuthLogin).toHaveBeenCalledOnce();
     });
 
     it('calls performOAuthLogin when not logged in', async () => {

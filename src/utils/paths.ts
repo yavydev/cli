@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join, resolve, relative } from 'node:path';
 
 export function getSkillOutputDir(projectSlug: string, options: { global?: boolean; output?: string }): string {
     if (options.output) {
@@ -13,12 +13,15 @@ export function getSkillOutputDir(projectSlug: string, options: { global?: boole
 }
 
 export function ensureDir(dirPath: string): void {
-    if (!existsSync(dirPath)) {
-        mkdirSync(dirPath, { recursive: true });
-    }
+    mkdirSync(dirPath, { recursive: true });
 }
 
-export function ensureParentDir(filePath: string): void {
-    const dir = dirname(filePath);
-    ensureDir(dir);
+/**
+ * Validates that a resolved file path is contained within the expected root directory.
+ * Prevents zip-slip / path traversal attacks.
+ */
+export function isPathSafe(filePath: string, rootDir: string): boolean {
+    const resolvedPath = resolve(rootDir, filePath);
+    const rel = relative(rootDir, resolvedPath);
+    return !rel.startsWith('..') && !resolve(resolvedPath).includes('\0');
 }

@@ -27,7 +27,7 @@ yavy generate my-org/my-project
 
 ### `yavy login`
 
-Opens your browser to authenticate with your Yavy account. Credentials are stored in `~/.yavy/credentials.json`.
+Opens your browser to authenticate with your Yavy account using OAuth (PKCE). Credentials are stored in `~/.yavy/credentials.json`.
 
 ### `yavy logout`
 
@@ -43,23 +43,30 @@ Lists all projects you have access to across your organizations.
 
 ### `yavy generate <org/project>`
 
-Generates a skill file from a project's indexed documentation.
+Downloads a skill from a project's indexed documentation.
 
 | Flag              | Description                                           |
 | ----------------- | ----------------------------------------------------- |
 | `--global`        | Save to global skills directory (`~/.claude/skills/`) |
 | `--output <path>` | Custom output path                                    |
-| `--force`         | Force regeneration even if cached                     |
+| `--force`         | Overwrite existing skill files                        |
 | `--json`          | Output as JSON                                        |
 
-By default, skills are saved to `.claude/skills/<project>/SKILL.md` in the current directory.
+By default, skills are saved to `.claude/skills/<project>/` in the current directory.
 
 ## How It Works
 
 1. Yavy indexes your documentation sources (websites, GitHub repos, Confluence, Notion)
-2. The CLI calls the Yavy API to generate a skill using the indexed content
+2. The CLI calls the Yavy API to download a skill using the indexed content
 3. The skill file is saved locally for your AI coding tools to discover
 4. AI coding assistants automatically activate the skill when working with relevant code
+
+## Configuration
+
+| Environment Variable | Description              | Default            |
+| -------------------- | ------------------------ | ------------------ |
+| `YAVY_BASE_URL`      | Override API base URL    | `https://yavy.dev` |
+| `YAVY_CLIENT_ID`     | Override OAuth client ID | (built-in)         |
 
 ## Related
 
