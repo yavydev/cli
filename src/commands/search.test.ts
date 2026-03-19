@@ -33,10 +33,10 @@ vi.mock('ora', () => ({
     })),
 }));
 
-import { YavyApiClient } from '../api/client';
+import { type SearchResponse, YavyApiClient } from '../api/client';
 import { error } from '../utils/output';
 
-function createMockClient(response = { data: [], meta: { query: '', total: 0 } }) {
+function createMockClient(response: SearchResponse = { data: [], meta: { query: '', total: 0 } }) {
     return {
         listProjects: vi.fn(),
         downloadSkill: vi.fn(),
