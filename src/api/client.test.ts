@@ -170,6 +170,52 @@ describe('error handling', () => {
     });
 });
 
+describe('search', () => {
+    let client: YavyApiClient;
+
+    beforeEach(async () => {
+        vi.stubGlobal('fetch', vi.fn());
+        vi.mocked(getAccessToken).mockResolvedValue('test-token');
+        client = await YavyApiClient.create();
+    });
+
+    it('sends GET to /api/v1/search with query param', async () => {
+        const response = { data: [], meta: { query: 'test', total: 0 } };
+        vi.mocked(fetch).mockResolvedValue(createMockResponse(response));
+
+        const result = await client.search('test');
+
+        expect(fetch).toHaveBeenLastCalledWith(
+            expect.stringContaining('/api/v1/search?query=test'),
+            expect.objectContaining({
+                method: 'GET',
+                headers: expect.objectContaining({
+                    Authorization: 'Bearer test-token',
+                }),
+            }),
+        );
+        expect(result).toEqual(response);
+    });
+
+    it('includes project param when provided', async () => {
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ data: [], meta: { query: 'test', total: 0 } }));
+
+        await client.search('test', { project: 'my-org/my-docs' });
+
+        const url = vi.mocked(fetch).mock.calls[0][0] as string;
+        expect(url).toContain('project=my-org%2Fmy-docs');
+    });
+
+    it('includes limit param when provided', async () => {
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ data: [], meta: { query: 'test', total: 0 } }));
+
+        await client.search('test', { limit: 5 });
+
+        const url = vi.mocked(fetch).mock.calls[0][0] as string;
+        expect(url).toContain('limit=5');
+    });
+});
+
 describe('retry behavior', () => {
     let client: YavyApiClient;
 

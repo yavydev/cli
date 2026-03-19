@@ -15,6 +15,18 @@ export interface ApiProject {
     has_indexed_content: boolean;
 }
 
+export interface SearchResult {
+    title: string;
+    url: string;
+    content: string;
+    project: string;
+}
+
+export interface SearchResponse {
+    data: SearchResult[];
+    meta: { query: string; total: number };
+}
+
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
 
 function isRetryable(error: unknown, status?: number): boolean {
@@ -116,6 +128,13 @@ export class YavyApiClient {
     async listProjects(): Promise<ApiProject[]> {
         const result = await this.request<{ data: ApiProject[] }>('GET', '/projects');
         return result.data;
+    }
+
+    async search(query: string, options?: { project?: string; limit?: number }): Promise<SearchResponse> {
+        const params = new URLSearchParams({ query });
+        if (options?.project) params.set('project', options.project);
+        if (options?.limit) params.set('limit', String(options.limit));
+        return this.request<SearchResponse>('GET', `/search?${params}`);
     }
 
     async downloadSkill(orgSlug: string, projectSlug: string): Promise<ArrayBuffer> {
