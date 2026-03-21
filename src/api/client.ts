@@ -1,5 +1,5 @@
-import { getAccessToken } from '../auth/store';
-import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '../config';
+import { getAccessToken } from '@/auth/store';
+import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '@/config';
 
 export interface ApiProject {
     id: number;

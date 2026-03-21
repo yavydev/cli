@@ -1,23 +1,23 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockResponse } from '../__test__/helpers';
+import { createMockResponse } from '../helpers';
 
 vi.mock('open', () => ({
     default: vi.fn(),
 }));
 
-vi.mock('./store', () => ({
+vi.mock('@/auth/store', () => ({
     saveCredentials: vi.fn(),
 }));
 
-vi.mock('../config', () => ({
+vi.mock('@/config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_CLIENT_ID: 'test-client-id',
 }));
 
 import openBrowser from 'open';
-import { saveCredentials } from './store';
+import { saveCredentials } from '@/auth/store';
 
 let requestHandler: (req: IncomingMessage, res: ServerResponse) => void;
 let serverClosed: boolean;
@@ -68,7 +68,7 @@ beforeEach(async () => {
     requestHandler = undefined as any;
     serverClosed = false;
     mockPort = 9876;
-    const mod = await import('./oauth');
+    const mod = await import('@/auth/oauth');
     performOAuthLogin = mod.performOAuthLogin;
 });
 

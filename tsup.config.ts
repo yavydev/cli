@@ -8,4 +8,7 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     splitting: false,
+    esbuildOptions(options) {
+        options.alias = { '@': './src' };
+    },
 });

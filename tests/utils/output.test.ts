@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { error, info, success, warn } from './output';
+import { error, info, success, warn } from '@/utils/output';
 
 vi.mock('chalk', () => ({
     default: {

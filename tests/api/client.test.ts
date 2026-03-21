@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockResponse } from '../__test__/helpers';
-import { YavyApiClient } from './client';
+import { createMockResponse } from '../helpers';
+import { YavyApiClient } from '@/api/client';
 
-vi.mock('../auth/store', () => ({
+vi.mock('@/auth/store', () => ({
     getAccessToken: vi.fn(),
 }));
 
-vi.mock('../config', () => ({
+vi.mock('@/config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_CLIENT_ID: 'test-client-id',
     YAVY_USER_AGENT: '@yavydev/cli',
@@ -14,7 +14,7 @@ vi.mock('../config', () => ({
     MAX_RETRIES: 3,
 }));
 
-import { getAccessToken } from '../auth/store';
+import { getAccessToken } from '@/auth/store';
 
 beforeEach(() => {
     vi.clearAllMocks();

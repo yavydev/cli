@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { loginCommand } from './login';
+import { loginCommand } from '@/commands/login';
 
-vi.mock('../auth/oauth', () => ({
+vi.mock('@/auth/oauth', () => ({
     performOAuthLogin: vi.fn(),
 }));
 
-vi.mock('../auth/store', () => ({
+vi.mock('@/auth/store', () => ({
     loadCredentials: vi.fn(),
     isExpired: vi.fn(),
 }));
 
-vi.mock('../utils/output', () => ({
+vi.mock('@/utils/output', () => ({
     error: vi.fn(),
     info: vi.fn(),
     success: vi.fn(),
@@ -25,9 +25,9 @@ vi.mock('ora', () => ({
     })),
 }));
 
-import { performOAuthLogin } from '../auth/oauth';
-import { isExpired, loadCredentials } from '../auth/store';
-import { error, info, success, warn } from '../utils/output';
+import { performOAuthLogin } from '@/auth/oauth';
+import { isExpired, loadCredentials } from '@/auth/store';
+import { error, info, success, warn } from '@/utils/output';
 
 async function run() {
     const cmd = loginCommand();

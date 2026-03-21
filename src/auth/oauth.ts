@@ -3,8 +3,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { URL } from 'node:url';
 import open from 'open';
-import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '../config';
-import { saveCredentials } from './store';
+import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '@/config';
+import { saveCredentials } from '@/auth/store';
 
 const PREFERRED_PORTS = [9876, 9877, 9878, 0]; // 0 = OS-assigned fallback
 const CALLBACK_PATH = '/callback';

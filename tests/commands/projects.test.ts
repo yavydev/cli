@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { projectsCommand } from './projects';
+import { projectsCommand } from '@/commands/projects';
 
-vi.mock('../api/client', () => ({
+vi.mock('@/api/client', () => ({
     YavyApiClient: {
         create: vi.fn(),
     },
 }));
 
-vi.mock('../utils/output', () => ({
+vi.mock('@/utils/output', () => ({
     error: vi.fn(),
 }));
 
-vi.mock('../config', () => ({
+vi.mock('@/config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_USER_AGENT: '@yavydev/cli',
     REQUEST_TIMEOUT_MS: 30_000,
@@ -36,8 +36,8 @@ vi.mock('ora', () => ({
     })),
 }));
 
-import { YavyApiClient } from '../api/client';
-import { error } from '../utils/output';
+import { YavyApiClient } from '@/api/client';
+import { error } from '@/utils/output';
 
 function createMockClient(projects: unknown[] = []) {
     return {

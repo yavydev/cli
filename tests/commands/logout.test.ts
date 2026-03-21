@@ -1,18 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
-import { logoutCommand } from './logout';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { logoutCommand } from '@/commands/logout';
 
-vi.mock('../auth/store', () => ({
+vi.mock('@/auth/store', () => ({
     loadCredentials: vi.fn(),
     clearCredentials: vi.fn(),
 }));
 
-vi.mock('../utils/output', () => ({
+vi.mock('@/utils/output', () => ({
     info: vi.fn(),
     success: vi.fn(),
 }));
 
-import { clearCredentials, loadCredentials } from '../auth/store';
-import { info, success } from '../utils/output';
+import { clearCredentials, loadCredentials } from '@/auth/store';
+import { info, success } from '@/utils/output';
 
 function run() {
     const cmd = logoutCommand();
@@ -26,6 +26,10 @@ function run() {
 }
 
 describe('logoutCommand', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('shows "not logged in" when no credentials', () => {
         vi.mocked(loadCredentials).mockReturnValue(null);
 

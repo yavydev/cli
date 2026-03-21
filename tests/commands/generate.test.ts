@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { generateCommand } from './generate';
+import { generateCommand } from '@/commands/generate';
 
-vi.mock('../api/client', () => ({
+vi.mock('@/api/client', () => ({
     YavyApiClient: {
         create: vi.fn(),
     },
 }));
 
-vi.mock('../utils/paths', () => ({
+vi.mock('@/utils/paths', () => ({
     getSkillOutputDir: vi.fn(() => '/mock/output/my-project'),
     ensureDir: vi.fn(),
     isPathSafe: vi.fn(() => true),
 }));
 
-vi.mock('../utils/output', () => ({
+vi.mock('@/utils/output', () => ({
     error: vi.fn(),
     success: vi.fn(),
     warn: vi.fn(),
@@ -51,9 +51,9 @@ vi.mock('ora', () => ({
 }));
 
 import { existsSync } from 'node:fs';
-import { YavyApiClient } from '../api/client';
-import { error, warn } from '../utils/output';
-import { getSkillOutputDir, isPathSafe } from '../utils/paths';
+import { YavyApiClient } from '@/api/client';
+import { error, warn } from '@/utils/output';
+import { getSkillOutputDir, isPathSafe } from '@/utils/paths';
 
 function createMockClient() {
     return {

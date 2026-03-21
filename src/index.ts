@@ -1,11 +1,12 @@
 import { Command } from 'commander';
 import pkg from '../package.json' with { type: 'json' };
-import { generateCommand } from './commands/generate';
-import { loginCommand } from './commands/login';
-import { logoutCommand } from './commands/logout';
-import { projectsCommand } from './commands/projects';
-import { searchCommand } from './commands/search';
-import { error } from './utils';
+import { generateCommand } from '@/commands/generate';
+import { initCommand } from '@/commands/init';
+import { loginCommand } from '@/commands/login';
+import { logoutCommand } from '@/commands/logout';
+import { projectsCommand } from '@/commands/projects';
+import { searchCommand } from '@/commands/search';
+import { error } from '@/utils';
 
 const program = new Command();
 
@@ -16,6 +17,7 @@ program.addCommand(logoutCommand());
 program.addCommand(projectsCommand());
 program.addCommand(searchCommand());
 program.addCommand(generateCommand());
+program.addCommand(initCommand());
 
 program.parseAsync().catch((err: unknown) => {
     error(err instanceof Error ? err.message : String(err));

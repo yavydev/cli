@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ensureDir, getSkillOutputDir, isPathSafe } from './paths';
+import { ensureDir, getSkillOutputDir, isPathSafe } from '@/utils/paths';
 
 vi.mock('node:fs', () => ({
     mkdirSync: vi.fn(),
