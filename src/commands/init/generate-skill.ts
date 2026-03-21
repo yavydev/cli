@@ -4,8 +4,15 @@ export function generateSkillContent(projects: ApiProject[]): string {
     const projectNames = projects.map((p) => p.name).join(', ');
     const description = `Search indexed documentation for ${projectNames}. Use when user needs reference info, asks 'how does X work', or needs API/feature lookups from these projects.`;
 
-    const projectRows = projects
-        .map((p) => `| ${escapePipe(p.name)} | \`${p.organization.slug}/${p.slug}\` | ${p.pages_count} | \`projects/${slugify(p.slug)}.md\` |`)
+    const projectList = projects
+        .map((p) => {
+            const ctx = p.context;
+            const productName = ctx.product ?? p.name;
+            const slug = slugify(p.slug);
+            const desc = p.description ? ` — ${p.description}` : '';
+            const domain = ctx.domain ? ` (${ctx.domain}${ctx.version ? ` ${ctx.version}` : ''})` : '';
+            return `- **[${escapePipe(productName)}](projects/${slug}.md)**${domain}${desc}`;
+        })
         .join('\n');
 
     return `---
@@ -16,7 +23,20 @@ allowed-tools: ['Bash']
 
 # Yavy Documentation Search
 
-Search indexed documentation via the Yavy CLI.
+Search across all indexed content. Read the linked project files for full context on each project.
+
+## Projects
+
+${projectList}
+
+## When to Use This Skill
+
+Search here when:
+- User needs information from indexed content
+- Query matches topics covered by projects above
+
+Do NOT search here when:
+- User needs real-time data or actions (this is read-only search)
 
 ## Commands
 
@@ -26,42 +46,91 @@ Search indexed documentation via the Yavy CLI.
 | \`yavy search "query" --project slug\` | Search one project |
 | \`yavy search "query" --json\` | JSON output for parsing |
 
-## Indexed Projects
+## Tips
 
-| Project | Slug | Pages | Docs |
-|---------|------|-------|------|
-${projectRows}
-
-## When to Use --project
-
-- User mentions a specific technology from the table above
-- Query clearly scopes to one domain
-- Omit when topic could span multiple projects
-
-## Gotchas
-
-| Issue | Fix |
-|---|---|
-| No results | Broaden query or remove --project |
-| CLI not installed | Run \`npm install -g @yavydev/cli\` then \`yavy login\` |
-| Stale project list | Re-run \`yavy init\` to refresh |
+- Describe what you're trying to accomplish
+- Ask specific questions for better matches
+- Use the \`--project\` flag to narrow results when query clearly scopes to one domain
 `;
 }
 
 export function generateProjectContent(project: ApiProject): string {
-    return `# ${project.name}
+    const ctx = project.context;
+    const productName = ctx.product ?? project.name;
+    const description = project.description ?? '';
+    const type = ctx.type ?? 'Documentation';
+    const domain = ctx.domain ?? '';
+    const version = ctx.version ?? '';
+    const complexity = ctx.complexity ?? '';
+    const audience = ctx.target_audience.length > 0 ? ctx.target_audience.join(', ') : 'Developers';
 
-- **Organization**: ${project.organization.name} (\`${project.organization.slug}\`)
-- **Slug**: \`${project.organization.slug}/${project.slug}\`
-- **Pages**: ${project.pages_count}
-${project.description ? `- **Description**: ${project.description}` : ''}
+    const lines: string[] = [];
 
-## Search This Project
+    lines.push(`# ${productName}`);
+    lines.push('');
 
-\`\`\`bash
-yavy search "your query" --project ${project.organization.slug}/${project.slug}
-\`\`\`
-`;
+    if (description) {
+        lines.push(description);
+        lines.push('');
+    }
+
+    // Metadata
+    const metaParts = [`**Type:** ${type}`];
+    if (domain) metaParts.push(`**Domain:** ${domain}`);
+    if (version) metaParts.push(`**Version:** ${version}`);
+    lines.push(metaParts.join(' | '));
+
+    if (complexity) {
+        lines.push(`**Complexity:** ${complexity}`);
+    }
+
+    lines.push(`**Audience:** ${audience}`);
+
+    if (ctx.languages.length > 0) {
+        lines.push(`**Languages:** ${ctx.languages.join(', ')}`);
+    }
+
+    if (ctx.related_technologies.length > 0) {
+        lines.push(`**Related Technologies:** ${ctx.related_technologies.join(', ')}`);
+    }
+
+    if (ctx.key_topics.length > 0) {
+        lines.push('');
+        lines.push('## Key Topics');
+        lines.push(ctx.key_topics.join(', '));
+    }
+
+    if (ctx.key_concepts.length > 0) {
+        lines.push('');
+        lines.push('## Key Concepts');
+        lines.push(ctx.key_concepts.join(', '));
+    }
+
+    if (ctx.example_queries.length > 0) {
+        lines.push('');
+        lines.push('## Example Questions');
+        for (const query of ctx.example_queries) {
+            lines.push(`- ${query}`);
+        }
+    }
+
+    if (ctx.content_structure.length > 0) {
+        lines.push('');
+        lines.push('## Content Structure');
+        for (const section of ctx.content_structure) {
+            lines.push(`- **${section.name}** (${section.page_count} pages)`);
+        }
+    }
+
+    lines.push('');
+    lines.push('## Search This Project');
+    lines.push('');
+    lines.push('```bash');
+    lines.push(`yavy search "your query" --project ${project.slug}`);
+    lines.push('```');
+    lines.push('');
+
+    return lines.join('\n');
 }
 
 export function slugify(name: string): string {

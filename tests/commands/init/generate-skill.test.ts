@@ -12,6 +12,20 @@ function makeProject(overrides: Partial<ApiProject> = {}): ApiProject {
         pages_count: 42,
         last_indexed_at: '2024-01-01T00:00:00Z',
         has_indexed_content: true,
+        context: {
+            product: null,
+            type: null,
+            domain: null,
+            version: null,
+            complexity: null,
+            target_audience: [],
+            key_topics: [],
+            key_concepts: [],
+            example_queries: [],
+            related_technologies: [],
+            languages: [],
+            content_structure: [],
+        },
         ...overrides,
     };
 }
@@ -31,7 +45,7 @@ describe('generateSkillContent', () => {
         expect(content).toContain('React Docs, Vue Guide');
     });
 
-    it('builds project table with all projects', () => {
+    it('lists all projects with links to project files', () => {
         const projects = [
             makeProject({ name: 'Alpha', slug: 'alpha', organization: { name: 'Org', slug: 'org' } }),
             makeProject({ name: 'Beta', slug: 'beta', organization: { name: 'Org', slug: 'org' } }),
@@ -39,8 +53,9 @@ describe('generateSkillContent', () => {
 
         const content = generateSkillContent(projects);
 
-        expect(content).toContain('| Alpha | `org/alpha` | 42 |');
-        expect(content).toContain('| Beta | `org/beta` | 42 |');
+        expect(content).toContain('**[Alpha](projects/alpha.md)**');
+        expect(content).toContain('**[Beta](projects/beta.md)**');
+        expect(content).toContain('## Projects');
     });
 
     it('includes commands table', () => {
@@ -51,18 +66,29 @@ describe('generateSkillContent', () => {
         expect(content).toContain('yavy search "query" --json');
     });
 
-    it('includes gotchas table', () => {
+    it('includes when-to-use section', () => {
         const content = generateSkillContent([makeProject()]);
 
-        expect(content).toContain('No results');
-        expect(content).toContain('CLI not installed');
-        expect(content).toContain('Stale project list');
+        expect(content).toContain('## When to Use This Skill');
+        expect(content).toContain('Do NOT search here when');
     });
 
-    it('references per-project docs files', () => {
-        const content = generateSkillContent([makeProject({ slug: 'my-project' })]);
+    it('links to project file with description and domain when available', () => {
+        const content = generateSkillContent([
+            makeProject({
+                slug: 'my-project',
+                description: 'Some docs',
+                context: {
+                    ...makeProject().context,
+                    domain: 'web',
+                    version: 'v2',
+                },
+            }),
+        ]);
 
-        expect(content).toContain('`projects/my-project.md`');
+        expect(content).toContain('**[Test Project](projects/my-project.md)**');
+        expect(content).toContain('(web v2)');
+        expect(content).toContain('Some docs');
     });
 
     it('escapes pipe characters in project names for table rows', () => {
@@ -95,14 +121,13 @@ describe('generateProjectContent', () => {
         const content = generateProjectContent(makeProject());
 
         expect(content).toContain('# Test Project');
-        expect(content).toContain('**Organization**: Test Org');
-        expect(content).toContain('**Slug**: `test-org/test-project`');
-        expect(content).toContain('**Pages**: 42');
+        expect(content).toContain('**Type:** Documentation');
+        expect(content).toContain('**Audience:** Developers');
     });
 
     it('includes description when present', () => {
         const content = generateProjectContent(makeProject({ description: 'My docs' }));
-        expect(content).toContain('**Description**: My docs');
+        expect(content).toContain('My docs');
     });
 
     it('omits description when null', () => {
@@ -112,7 +137,7 @@ describe('generateProjectContent', () => {
 
     it('includes search command with correct slug', () => {
         const content = generateProjectContent(makeProject());
-        expect(content).toContain('yavy search "your query" --project test-org/test-project');
+        expect(content).toContain('yavy search "your query" --project test-project');
     });
 });
 

@@ -99,20 +99,19 @@ async function selectTools(options: InitOptions): Promise<AiTool[]> {
     const detected = scanForTools(process.cwd());
 
     if (options.yes) {
-        const tools = detected.length > 0 ? detected : [AiTool.Other];
-        p.log.info(`Auto-selecting: ${tools.map((t) => TOOL_CONFIGS[t].name).join(', ')}`);
-        return tools;
+        if (detected.length === 0) {
+            p.log.warn('No AI tools detected. Use --tool to specify one.');
+            process.exit(1);
+        }
+        p.log.info(`Auto-selecting: ${detected.map((t) => TOOL_CONFIGS[t].name).join(', ')}`);
+        return detected;
     }
 
-    const allOptions = [...detected, ...(detected.includes(AiTool.Other) ? [] : [AiTool.Other])].map((tool) => ({
+    const allOptions = Object.values(AiTool).map((tool) => ({
         value: tool,
         label: TOOL_CONFIGS[tool].name,
-        hint: detected.includes(tool) && tool !== AiTool.Other ? 'detected' : undefined,
+        hint: detected.includes(tool) ? 'detected' : undefined,
     }));
-
-    if (allOptions.length === 0) {
-        allOptions.push({ value: AiTool.Other, label: 'Other', hint: undefined });
-    }
 
     const selected = await p.multiselect({
         message: 'Which AI tools do you want to set up?',

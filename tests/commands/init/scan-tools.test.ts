@@ -36,10 +36,6 @@ describe('scanForTools', () => {
         expect(scanForTools('/project')).toEqual([AiTool.ClaudeCode, AiTool.Cursor, AiTool.Vscode, AiTool.Windsurf, AiTool.OpenCode]);
     });
 
-    it('does not include "other" in scan results', () => {
-        vi.mocked(existsSync).mockReturnValue(true);
-        expect(scanForTools('/project')).not.toContain(AiTool.Other);
-    });
 });
 
 describe('resolveToolFromFlag', () => {
@@ -49,7 +45,6 @@ describe('resolveToolFromFlag', () => {
         expect(resolveToolFromFlag('vscode')).toBe(AiTool.Vscode);
         expect(resolveToolFromFlag('windsurf')).toBe(AiTool.Windsurf);
         expect(resolveToolFromFlag('opencode')).toBe(AiTool.OpenCode);
-        expect(resolveToolFromFlag('other')).toBe(AiTool.Other);
     });
 
     it('resolves display names case-insensitively', () => {

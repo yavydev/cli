@@ -4,7 +4,6 @@ export enum AiTool {
     Vscode = 'vscode',
     Windsurf = 'windsurf',
     OpenCode = 'opencode',
-    Other = 'other',
 }
 
 export interface ToolConfig {
@@ -57,12 +56,5 @@ export const TOOL_CONFIGS: Record<AiTool, ToolConfig> = {
         mcpConfigPath: 'opencode.json',
         mcpFormat: 'embedded',
         mcpServerKey: 'mcp',
-    },
-    [AiTool.Other]: {
-        name: 'Other',
-        detectDir: '',
-        skillDir: 'yavy-skills',
-        mcpConfigPath: null,
-        mcpFormat: null,
     },
 };

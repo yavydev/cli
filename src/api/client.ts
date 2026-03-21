@@ -1,6 +1,21 @@
 import { getAccessToken } from '@/auth/store';
 import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '@/config';
 
+export interface ProjectContext {
+    product: string | null;
+    type: string | null;
+    domain: string | null;
+    version: string | null;
+    complexity: string | null;
+    target_audience: string[];
+    key_topics: string[];
+    key_concepts: string[];
+    example_queries: string[];
+    related_technologies: string[];
+    languages: string[];
+    content_structure: Array<{ name: string; page_count: number }>;
+}
+
 export interface ApiProject {
     id: number;
     name: string;
@@ -13,6 +28,7 @@ export interface ApiProject {
     pages_count: number;
     last_indexed_at: string | null;
     has_indexed_content: boolean;
+    context: ProjectContext;
 }
 
 export interface SearchResult {

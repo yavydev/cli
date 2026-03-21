@@ -26,6 +26,20 @@ function makeProject(overrides: Partial<ApiProject> = {}): ApiProject {
         pages_count: 42,
         last_indexed_at: '2024-01-01T00:00:00Z',
         has_indexed_content: true,
+        context: {
+            product: null,
+            type: null,
+            domain: null,
+            version: null,
+            complexity: null,
+            target_audience: [],
+            key_topics: [],
+            key_concepts: [],
+            example_queries: [],
+            related_technologies: [],
+            languages: [],
+            content_structure: [],
+        },
         ...overrides,
     };
 }
@@ -152,13 +166,6 @@ describe('configureTool', () => {
         expect(mkdirSync).toHaveBeenCalledWith(expect.stringContaining('.github/instructions/yavy/projects'), {
             recursive: true,
         });
-    });
-
-    it('uses generic path for Other tool', () => {
-        const result = configureTool(AiTool.Other, [makeProject()], '/project');
-
-        expect(result.skillPath).toContain('yavy-skills/SKILL.md');
-        expect(result.mcpConfigured).toBe(false);
     });
 
     it('includes org slug in MCP URL', () => {
