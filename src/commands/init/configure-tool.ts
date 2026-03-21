@@ -56,7 +56,7 @@ function buildMcpUrl(projects: ApiProject[]): string {
         );
     }
 
-    return `${YAVY_BASE_URL}/mcp/${orgSlugs[0]}`;
+    return `${YAVY_BASE_URL}/mcp/${encodeURIComponent(orgSlugs[0])}`;
 }
 
 function readJsonFile(configPath: string): Record<string, unknown> {
@@ -80,11 +80,10 @@ function writeJsonFile(configPath: string, data: Record<string, unknown>): void 
 /** Standard MCP config: { servers: { yavy: { url, type } } } (Cursor, VS Code) */
 function mergeJsonMcpConfig(configPath: string, projects: ApiProject[]): void {
     const existing = readJsonFile(configPath);
-    const servers = (existing.servers ?? existing.mcpServers ?? {}) as Record<string, unknown>;
+    const serverKey = existing.mcpServers ? 'mcpServers' : 'servers';
+    const servers = (existing[serverKey] ?? {}) as Record<string, unknown>;
 
     servers['yavy'] = { url: buildMcpUrl(projects), type: 'sse' };
-
-    const serverKey = existing.mcpServers ? 'mcpServers' : 'servers';
     existing[serverKey] = servers;
     writeJsonFile(configPath, existing);
 }

@@ -149,12 +149,12 @@ export class YavyApiClient {
     async search(query: string, options?: { project?: string; limit?: number }): Promise<SearchResponse> {
         const params = new URLSearchParams({ query });
         if (options?.project) params.set('project', options.project);
-        if (options?.limit) params.set('limit', String(options.limit));
+        if (options?.limit != null) params.set('limit', String(options.limit));
         return this.request<SearchResponse>('GET', `/search?${params}`);
     }
 
     async downloadSkill(orgSlug: string, projectSlug: string): Promise<ArrayBuffer> {
-        const url = `${YAVY_BASE_URL}/api/v1/${orgSlug}/${projectSlug}/skill/download`;
+        const url = `${YAVY_BASE_URL}/api/v1/${encodeURIComponent(orgSlug)}/${encodeURIComponent(projectSlug)}/skill/download`;
 
         const response = await this.fetchWithRetry(url, {
             method: 'GET',

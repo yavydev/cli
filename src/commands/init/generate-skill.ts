@@ -150,5 +150,5 @@ function escapePipe(str: string): string {
 }
 
 function escapeYaml(str: string): string {
-    return str.replace(/"/g, '\\"');
+    return str.replace(/\\/g, '\\\\').replace(/\n/g, ' ').replace(/\r/g, '').replace(/"/g, '\\"');
 }
