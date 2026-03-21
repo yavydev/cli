@@ -159,9 +159,7 @@ describe('initCommand', () => {
 
     it('filters projects to only indexed ones', async () => {
         vi.mocked(scanForTools).mockReturnValue([AiTool.ClaudeCode]);
-        vi.mocked(p.multiselect)
-            .mockResolvedValueOnce([AiTool.ClaudeCode])
-            .mockResolvedValueOnce(['indexed-proj']);
+        vi.mocked(p.multiselect).mockResolvedValueOnce([AiTool.ClaudeCode]).mockResolvedValueOnce(['indexed-proj']);
 
         mockClient([
             makeProject({ slug: 'indexed-proj', has_indexed_content: true }),

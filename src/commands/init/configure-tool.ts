@@ -68,6 +68,7 @@ function readJsonFile(configPath: string): Record<string, unknown> {
         throw new Error(
             `Failed to parse ${configPath}: ${err instanceof Error ? err.message : String(err)}. ` +
                 `Fix the JSON manually or delete the file and re-run yavy init.`,
+            { cause: err },
         );
     }
 }

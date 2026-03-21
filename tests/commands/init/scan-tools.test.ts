@@ -35,7 +35,6 @@ describe('scanForTools', () => {
         vi.mocked(existsSync).mockReturnValue(true);
         expect(scanForTools('/project')).toEqual([AiTool.ClaudeCode, AiTool.Cursor, AiTool.Vscode, AiTool.Windsurf, AiTool.OpenCode]);
     });
-
 });
 
 describe('resolveToolFromFlag', () => {
