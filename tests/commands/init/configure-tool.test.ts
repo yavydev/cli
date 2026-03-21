@@ -177,7 +177,7 @@ describe('configureTool', () => {
     });
 
     it('warns when projects span multiple organizations', () => {
-        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         const projects = [
             makeProject({ organization: { name: 'Org A', slug: 'org-a' } }),
@@ -186,9 +186,9 @@ describe('configureTool', () => {
 
         configureTool(AiTool.Cursor, projects, '/project');
 
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('multiple organizations'));
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('org-a'));
+        expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('multiple organizations'));
+        expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('org-a'));
 
-        warnSpy.mockRestore();
+        stderrSpy.mockRestore();
     });
 });

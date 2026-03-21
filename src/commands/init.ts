@@ -3,8 +3,8 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { type ApiProject, YavyApiClient } from '@/api/client';
 import { getAccessToken } from '@/auth/store';
-import { error } from '@/utils';
-import { configureTool } from '@/commands/init/configure-tool';
+import { error, warn } from '@/utils';
+import { configureTool, type ConfigureResult } from '@/commands/init/configure-tool';
 import { resolveToolFromFlag, scanForTools } from '@/commands/init/scan-tools';
 import { AiTool, TOOL_CONFIGS, type InitOptions } from '@/commands/init/types';
 
@@ -53,7 +53,14 @@ async function runInit(options: InitOptions): Promise<void> {
     const s = p.spinner();
     s.start('Configuring tools...');
 
-    const results = selectedTools.map((tool) => configureTool(tool, selectedProjects, process.cwd()));
+    const results: ConfigureResult[] = [];
+    for (const tool of selectedTools) {
+        try {
+            results.push(configureTool(tool, selectedProjects, process.cwd()));
+        } catch (err) {
+            warn(`Failed to configure ${TOOL_CONFIGS[tool].name}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
 
     s.stop('Tools configured.');
 

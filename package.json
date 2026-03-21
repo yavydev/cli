@@ -1,7 +1,7 @@
 {
     "name": "@yavydev/cli",
     "version": "0.1.0",
-    "description": "Generate AI skills from your indexed documentation on Yavy",
+    "description": "Search and manage your AI-ready documentation on Yavy",
     "type": "module",
     "bin": {
         "yavy": "./bin/yavy.js"
@@ -13,8 +13,8 @@
         "typecheck": "tsc --noEmit",
         "test": "vitest run",
         "test:watch": "vitest",
-        "format": "prettier --write \"src/**/*.{ts,js}\" \"*.{json,md}\"",
-        "format:check": "prettier --check \"src/**/*.{ts,js}\" \"*.{json,md}\""
+        "format": "prettier --write \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{json,md}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{json,md}\""
     },
     "keywords": [
         "yavy",

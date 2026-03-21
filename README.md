@@ -1,6 +1,6 @@
 # Yavy CLI
 
-Generate AI skills from your indexed documentation on [Yavy](https://yavy.dev).
+Search and manage your AI-ready documentation on [Yavy](https://yavy.dev).
 
 ## Installation
 
@@ -8,22 +8,44 @@ Generate AI skills from your indexed documentation on [Yavy](https://yavy.dev).
 npm install -g @yavydev/cli
 ```
 
-Requires Node.js >= 18.
+Requires Node.js >= 20.
 
 ## Quick Start
 
 ```bash
-# Authenticate with your Yavy account
+# Interactive setup: authenticate, select projects, configure AI tools
+yavy init
+
+# Or authenticate manually
 yavy login
+
+# Search your indexed documentation
+yavy search "how do I get started?"
 
 # List your projects
 yavy projects
-
-# Generate a skill for a project
-yavy generate my-org/my-project
 ```
 
 ## Commands
+
+### `yavy init`
+
+Interactive setup wizard that authenticates, selects projects, and configures your AI tools (skills + MCP config) in one step.
+
+| Flag            | Description                                             |
+| --------------- | ------------------------------------------------------- |
+| `--tool <name>` | Configure a specific tool only                          |
+| `--yes`         | Non-interactive mode: all detected tools + all projects |
+
+### `yavy search <query>`
+
+Search your indexed documentation directly from the terminal.
+
+| Flag                      | Description                        |
+| ------------------------- | ---------------------------------- |
+| `--project <org/project>` | Scope search to a specific project |
+| `--limit <number>`        | Maximum results (1-20, default 10) |
+| `--json`                  | Output as JSON                     |
 
 ### `yavy login`
 
@@ -57,8 +79,8 @@ By default, skills are saved to `.claude/skills/<project>/` in the current direc
 ## How It Works
 
 1. Yavy indexes your documentation sources (websites, GitHub repos, Confluence, Notion)
-2. The CLI calls the Yavy API to download a skill using the indexed content
-3. The skill file is saved locally for your AI coding tools to discover
+2. The CLI calls the Yavy API to search or download skills using the indexed content
+3. Skills and MCP configs are saved locally for your AI coding tools to discover
 4. AI coding assistants automatically activate the skill when working with relevant code
 
 ## Configuration
@@ -71,7 +93,7 @@ By default, skills are saved to `.claude/skills/<project>/` in the current direc
 ## Related
 
 - [Yavy Claude Code Plugin](https://github.com/yavydev/claude-code) — Claude Code plugin with interactive setup
-- [Yavy](https://yavy.dev) — Index documentation, generate AI skills
+- [Yavy](https://yavy.dev) — Index documentation, search with AI
 
 ## License
 

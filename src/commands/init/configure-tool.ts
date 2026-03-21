@@ -4,6 +4,7 @@ import type { ApiProject } from '@/api/client';
 import { YAVY_BASE_URL } from '@/config';
 import { generateProjectContent, generateSkillContent, slugify } from '@/commands/init/generate-skill';
 import { type AiTool, TOOL_CONFIGS } from '@/commands/init/types';
+import { warn } from '@/utils';
 
 export interface ConfigureResult {
     tool: AiTool;
@@ -50,8 +51,8 @@ function buildMcpUrl(projects: ApiProject[]): string {
     const orgSlugs = [...new Set(projects.map((proj) => proj.organization.slug))];
 
     if (orgSlugs.length > 1) {
-        console.warn(
-            `Warning: Projects span multiple organizations (${orgSlugs.join(', ')}). ` +
+        warn(
+            `Projects span multiple organizations (${orgSlugs.join(', ')}). ` +
                 `MCP will be configured for "${orgSlugs[0]}" only. Run yavy init per organization for full coverage.`,
         );
     }

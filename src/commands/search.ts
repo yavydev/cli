@@ -13,6 +13,12 @@ export function searchCommand(): Command {
         .option('--json', 'Output as JSON')
         .action(async (query: string, options: { project?: string; limit: string; json?: boolean }) => {
             const limit = parseInt(options.limit, 10);
+
+            if (isNaN(limit) || limit < 1 || limit > 20) {
+                error('--limit must be a number between 1 and 20');
+                process.exit(1);
+            }
+
             const spinner = options.json ? null : ora('Searching...').start();
 
             try {
