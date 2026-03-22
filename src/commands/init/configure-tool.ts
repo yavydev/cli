@@ -1,21 +1,31 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import type { ApiProject } from '@/api/client';
 import { YAVY_BASE_URL } from '@/config';
 import { generateProjectContent, generateSkillContent, slugify } from '@/commands/init/generate-skill';
-import { type AiTool, TOOL_CONFIGS } from '@/commands/init/types';
+import { type AiTool, type Scope, TOOL_CONFIGS } from '@/commands/init/types';
 import { warn } from '@/utils';
 
 export interface ConfigureResult {
     tool: AiTool;
     skillPath: string;
+    scope: Scope;
     mcpConfigured: boolean;
     projectFiles: string[];
 }
 
-export function configureTool(tool: AiTool, projects: ApiProject[], cwd: string): ConfigureResult {
+export function configureTool(tool: AiTool, projects: ApiProject[], cwd: string, scope: Scope = 'project'): ConfigureResult {
     const config = TOOL_CONFIGS[tool];
-    const skillDir = join(cwd, config.skillDir);
+
+    let skillDir: string;
+    let effectiveScope: Scope = scope;
+    if (scope === 'user' && config.userSkillDir) {
+        skillDir = join(homedir(), config.userSkillDir);
+    } else {
+        skillDir = join(cwd, config.skillDir);
+        effectiveScope = 'project';
+    }
     const projectsDir = join(skillDir, 'projects');
 
     mkdirSync(projectsDir, { recursive: true });
@@ -44,7 +54,7 @@ export function configureTool(tool: AiTool, projects: ApiProject[], cwd: string)
         }
     }
 
-    return { tool, skillPath, mcpConfigured, projectFiles };
+    return { tool, skillPath, scope: effectiveScope, mcpConfigured, projectFiles };
 }
 
 function buildMcpUrl(projects: ApiProject[]): string {

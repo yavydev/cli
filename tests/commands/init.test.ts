@@ -125,7 +125,7 @@ describe('initCommand', () => {
         await run(['--tool', 'claude-code']);
 
         expect(resolveToolFromFlag).toHaveBeenCalledWith('claude-code');
-        expect(configureTool).toHaveBeenCalledWith(AiTool.ClaudeCode, expect.any(Array), '/project');
+        expect(configureTool).toHaveBeenCalledWith(AiTool.ClaudeCode, expect.any(Array), '/project', 'project');
     });
 
     it('exits with error for unknown --tool', async () => {

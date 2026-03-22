@@ -6,13 +6,14 @@ import { getAccessToken } from '@/auth/store';
 import { error, warn } from '@/utils';
 import { configureTool, type ConfigureResult } from '@/commands/init/configure-tool';
 import { resolveToolFromFlag, scanForTools } from '@/commands/init/scan-tools';
-import { AiTool, TOOL_CONFIGS, type InitOptions } from '@/commands/init/types';
+import { AiTool, type Scope, TOOL_CONFIGS, type InitOptions } from '@/commands/init/types';
 
 export function initCommand(): Command {
     return new Command('init')
         .description('Set up Yavy for your AI tools (skills + MCP config)')
         .option('--tool <name>', 'Configure a specific tool only')
         .option('--projects <slugs>', 'Comma-separated project slugs to configure (skips interactive selection)')
+        .option('--scope <scope>', 'Install scope: "project" (default) or "user" (global, applies to all projects)')
         .option('--yes', 'Non-interactive mode: configure all detected tools + all projects')
         .action(async (options: InitOptions) => {
             try {
@@ -51,13 +52,15 @@ async function runInit(options: InitOptions): Promise<void> {
         process.exit(0);
     }
 
+    const scope = resolveScope(options, selectedTools);
+
     const s = p.spinner();
     s.start('Configuring tools...');
 
     const results: ConfigureResult[] = [];
     for (const tool of selectedTools) {
         try {
-            results.push(configureTool(tool, selectedProjects, process.cwd()));
+            results.push(configureTool(tool, selectedProjects, process.cwd(), scope));
         } catch (err) {
             warn(`Failed to configure ${TOOL_CONFIGS[tool].name}: ${err instanceof Error ? err.message : String(err)}`);
         }
@@ -70,7 +73,8 @@ async function runInit(options: InitOptions): Promise<void> {
             .map((r) => {
                 const config = TOOL_CONFIGS[r.tool];
                 const mcp = r.mcpConfigured ? ` + MCP` : '';
-                return `${chalk.bold(config.name)}: ${r.skillPath} (${r.projectFiles.length} project files${mcp})`;
+                const scopeLabel = r.scope === 'user' ? ' [user]' : ' [project]';
+                return `${chalk.bold(config.name)}: ${r.skillPath}${scopeLabel} (${r.projectFiles.length} project files${mcp})`;
             })
             .join('\n'),
         'Summary',
@@ -178,6 +182,27 @@ async function selectProjects(projects: ApiProject[], options: InitOptions): Pro
 
     const selectedSlugs = new Set(selected as string[]);
     return projects.filter((proj) => selectedSlugs.has(proj.slug));
+}
+
+function resolveScope(options: InitOptions, tools: AiTool[]): Scope {
+    if (options.scope) {
+        const normalized = options.scope.toLowerCase() as Scope;
+        if (normalized !== 'project' && normalized !== 'user') {
+            p.log.error(`Invalid scope: ${options.scope}. Use "project" or "user".`);
+            process.exit(1);
+        }
+
+        if (normalized === 'user') {
+            const unsupported = tools.filter((t) => !TOOL_CONFIGS[t].userSkillDir);
+            if (unsupported.length > 0) {
+                warn(`User scope not supported for: ${unsupported.map((t) => TOOL_CONFIGS[t].name).join(', ')}. Using project scope for those.`);
+            }
+        }
+
+        return normalized;
+    }
+
+    return 'project';
 }
 
 async function fetchProjects(client: YavyApiClient): Promise<ApiProject[]> {
