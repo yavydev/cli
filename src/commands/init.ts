@@ -12,6 +12,7 @@ export function initCommand(): Command {
     return new Command('init')
         .description('Set up Yavy for your AI tools (skills + MCP config)')
         .option('--tool <name>', 'Configure a specific tool only')
+        .option('--projects <slugs>', 'Comma-separated project slugs to configure (skips interactive selection)')
         .option('--yes', 'Non-interactive mode: configure all detected tools + all projects')
         .action(async (options: InitOptions) => {
             try {
@@ -133,6 +134,30 @@ async function selectTools(options: InitOptions): Promise<AiTool[]> {
 }
 
 async function selectProjects(projects: ApiProject[], options: InitOptions): Promise<ApiProject[]> {
+    if (options.projects) {
+        const requestedSlugs = new Set(
+            options.projects
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
+        );
+        const matched = projects.filter((proj) => requestedSlugs.has(proj.slug));
+
+        if (matched.length === 0) {
+            p.log.error('No matching projects found for the provided slugs.');
+            p.log.info(`Available: ${projects.map((proj) => proj.slug).join(', ')}`);
+            process.exit(1);
+        }
+
+        const unmatched = [...requestedSlugs].filter((s) => !matched.some((proj) => proj.slug === s));
+        if (unmatched.length > 0) {
+            warn(`Skipping unknown slugs: ${unmatched.join(', ')}`);
+        }
+
+        p.log.info(`Selected ${matched.length} project(s) via --projects`);
+        return matched;
+    }
+
     if (options.yes) {
         p.log.info(`Auto-selecting all ${projects.length} project(s)`);
         return projects;

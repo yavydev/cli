@@ -17,6 +17,7 @@ export interface ToolConfig {
 
 export interface InitOptions {
     tool?: string;
+    projects?: string;
     yes?: boolean;
 }
 
