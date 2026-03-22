@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '../config';
+import { YAVY_BASE_URL, YAVY_CLIENT_ID } from '@/config';
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 

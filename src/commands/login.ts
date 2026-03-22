@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import ora from 'ora';
-import { performOAuthLogin } from '../auth/oauth';
-import { isExpired, loadCredentials } from '../auth/store';
-import { error, info, success, warn } from '../utils';
+import { performOAuthLogin } from '@/auth/oauth';
+import { isExpired, loadCredentials } from '@/auth/store';
+import { error, info, success, warn } from '@/utils';
 
 export function loginCommand(): Command {
     return new Command('login').description('Log in to your Yavy account').action(async () => {

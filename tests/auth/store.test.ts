@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockResponse } from '../__test__/helpers';
-import { clearCredentials, getAccessToken, isExpired, loadCredentials, saveCredentials, type Credentials } from './store';
+import { createMockResponse } from '../helpers';
+import { clearCredentials, getAccessToken, isExpired, loadCredentials, saveCredentials, type Credentials } from '@/auth/store';
 
 vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock('node:os', () => ({
     homedir: vi.fn(() => '/mock-home'),
 }));
 
-vi.mock('../config', () => ({
+vi.mock('@/config', () => ({
     YAVY_BASE_URL: 'https://test.yavy.dev',
     YAVY_CLIENT_ID: 'test-client-id',
 }));

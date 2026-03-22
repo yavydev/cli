@@ -4,8 +4,8 @@ import { unzipSync } from 'fflate';
 import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import ora from 'ora';
-import { YavyApiClient } from '../api/client';
-import { ensureDir, error, getSkillOutputDir, isPathSafe, success, warn } from '../utils';
+import { YavyApiClient } from '@/api/client';
+import { ensureDir, error, getSkillOutputDir, isPathSafe, success, warn } from '@/utils';
 
 export function generateCommand(): Command {
     return new Command('generate')

@@ -1,5 +1,20 @@
-import { getAccessToken } from '../auth/store';
-import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '../config';
+import { getAccessToken } from '@/auth/store';
+import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '@/config';
+
+export interface ProjectContext {
+    product: string | null;
+    type: string | null;
+    domain: string | null;
+    version: string | null;
+    complexity: string | null;
+    target_audience: string[];
+    key_topics: string[];
+    key_concepts: string[];
+    example_queries: string[];
+    related_technologies: string[];
+    languages: string[];
+    content_structure: Array<{ name: string; page_count: number }>;
+}
 
 export interface ApiProject {
     id: number;
@@ -13,6 +28,19 @@ export interface ApiProject {
     pages_count: number;
     last_indexed_at: string | null;
     has_indexed_content: boolean;
+    context: ProjectContext;
+}
+
+export interface SearchResult {
+    title: string;
+    url: string;
+    content: string;
+    project: string;
+}
+
+export interface SearchResponse {
+    data: SearchResult[];
+    meta: { query: string; total: number };
 }
 
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
@@ -118,8 +146,15 @@ export class YavyApiClient {
         return result.data;
     }
 
+    async search(query: string, options?: { project?: string; limit?: number }): Promise<SearchResponse> {
+        const params = new URLSearchParams({ query });
+        if (options?.project) params.set('project', options.project);
+        if (options?.limit != null) params.set('limit', String(options.limit));
+        return this.request<SearchResponse>('GET', `/search?${params}`);
+    }
+
     async downloadSkill(orgSlug: string, projectSlug: string): Promise<ArrayBuffer> {
-        const url = `${YAVY_BASE_URL}/api/v1/${orgSlug}/${projectSlug}/skill/download`;
+        const url = `${YAVY_BASE_URL}/api/v1/${encodeURIComponent(orgSlug)}/${encodeURIComponent(projectSlug)}/skill/download`;
 
         const response = await this.fetchWithRetry(url, {
             method: 'GET',
