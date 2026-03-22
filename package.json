@@ -1,6 +1,6 @@
 {
     "name": "@yavydev/cli",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Search and manage your AI-ready documentation on Yavy",
     "type": "module",
     "bin": {
