@@ -4,3 +4,4 @@ dist
 .omc
 *.log
 *.tgz
+.claude

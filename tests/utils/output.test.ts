@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { error, info, success, warn } from '@/utils/output';
+import type { ApiProject } from '@/api/client';
+import { error, formatProjectCreated, info, success, warn } from '@/utils/output';
 
 vi.mock('chalk', () => ({
     default: {
@@ -63,5 +64,39 @@ describe('output utilities', () => {
         info('note');
         const call = vi.mocked(console.log).mock.calls[0][0] as string;
         expect(call).toContain('ℹ');
+    });
+});
+
+describe('formatProjectCreated', () => {
+    const project = {
+        id: 1,
+        name: 'Laravel Docs',
+        slug: 'laravel-docs',
+        description: null,
+        organization: { name: 'Acme', slug: 'acme' },
+        pages_count: 0,
+        last_indexed_at: null,
+        has_indexed_content: false,
+        mcp_url: 'https://yavy.dev/mcp/acme/laravel-docs',
+    } as ApiProject;
+
+    it('includes the project name', () => {
+        expect(formatProjectCreated(project)).toContain('Laravel Docs');
+    });
+
+    it('includes the organization name and slug', () => {
+        expect(formatProjectCreated(project)).toContain('Acme (acme)');
+    });
+
+    it('includes the project slug', () => {
+        expect(formatProjectCreated(project)).toContain('laravel-docs');
+    });
+
+    it('includes the MCP URL', () => {
+        expect(formatProjectCreated(project)).toContain('https://yavy.dev/mcp/acme/laravel-docs');
+    });
+
+    it('includes success message', () => {
+        expect(formatProjectCreated(project)).toContain('Project created successfully!');
     });
 });

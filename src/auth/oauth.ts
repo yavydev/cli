@@ -145,7 +145,7 @@ export async function performOAuthLogin(): Promise<boolean> {
                 authUrl.searchParams.set('code_challenge', codeChallenge);
                 authUrl.searchParams.set('code_challenge_method', 'S256');
 
-                open(authUrl.toString());
+                void open(authUrl.toString());
             })
             .catch((err) => {
                 server.close();

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockResponse } from '../helpers';
-import { YavyApiClient } from '@/api/client';
+import { ApiError, YavyApiClient } from '@/api/client';
 
 vi.mock('@/auth/store', () => ({
     getAccessToken: vi.fn(),
@@ -257,5 +257,139 @@ describe('retry behavior', () => {
 
         await expect(client.listProjects()).rejects.toThrow('Not found');
         expect(fetch).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('createProject', () => {
+    let client: YavyApiClient;
+
+    beforeEach(async () => {
+        vi.stubGlobal('fetch', vi.fn());
+        vi.mocked(getAccessToken).mockResolvedValue('test-token');
+        client = await YavyApiClient.create();
+    });
+
+    it('sends POST to correct path with payload', async () => {
+        const responseData = {
+            data: {
+                id: 1,
+                name: 'New Project',
+                slug: 'new-project',
+                mcp_url: 'https://test.yavy.dev/mcp/org/new-project',
+                organization: { name: 'Org', slug: 'org' },
+            },
+        };
+        vi.mocked(fetch).mockResolvedValue(createMockResponse(responseData, 201));
+
+        const payload = {
+            url_discovery_mode: 'web_crawl' as const,
+            base_url: 'https://docs.example.com',
+            is_public: true,
+        };
+
+        await client.createProject('my-org', payload);
+
+        expect(fetch).toHaveBeenLastCalledWith(
+            'https://test.yavy.dev/api/v1/my-org/projects',
+            expect.objectContaining({
+                method: 'POST',
+                headers: expect.objectContaining({
+                    Authorization: 'Bearer test-token',
+                    'Content-Type': 'application/json',
+                }),
+                body: JSON.stringify(payload),
+            }),
+        );
+    });
+
+    it('returns the created project', async () => {
+        const responseData = {
+            data: {
+                id: 1,
+                name: 'New Project',
+                slug: 'new-project',
+                mcp_url: 'https://test.yavy.dev/mcp/org/new-project',
+                organization: { name: 'Org', slug: 'org' },
+            },
+        };
+        vi.mocked(fetch).mockResolvedValue(createMockResponse(responseData, 201));
+
+        const result = await client.createProject('my-org', {
+            url_discovery_mode: 'web_crawl',
+            base_url: 'https://docs.example.com',
+        });
+
+        expect(result.data.name).toBe('New Project');
+        expect(result.data.mcp_url).toBe('https://test.yavy.dev/mcp/org/new-project');
+    });
+
+    it('encodes org slug in URL', async () => {
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({ data: {} }, 201));
+
+        await client.createProject('my org', { url_discovery_mode: 'web_crawl' });
+
+        const url = vi.mocked(fetch).mock.calls[0][0] as string;
+        expect(url).toContain('/my%20org/projects');
+    });
+});
+
+describe('ApiError', () => {
+    it('is an instance of Error', () => {
+        const err = new ApiError(422, { errors: {} });
+        expect(err).toBeInstanceOf(Error);
+    });
+
+    it('exposes status and body', () => {
+        const body = { message: 'Validation failed', errors: { name: ['required'] } };
+        const err = new ApiError(422, body);
+
+        expect(err.status).toBe(422);
+        expect(err.body).toBe(body);
+    });
+
+    it('uses custom message when provided', () => {
+        const err = new ApiError(401, {}, 'Auth expired');
+        expect(err.message).toBe('Auth expired');
+    });
+
+    it('generates default message from status', () => {
+        const err = new ApiError(500, {});
+        expect(err.message).toContain('500');
+    });
+});
+
+describe('error handling throws ApiError', () => {
+    let client: YavyApiClient;
+
+    beforeEach(async () => {
+        vi.stubGlobal('fetch', vi.fn());
+        vi.mocked(getAccessToken).mockResolvedValue('test-token');
+        client = await YavyApiClient.create();
+    });
+
+    it('throws ApiError on 401', async () => {
+        vi.mocked(fetch).mockResolvedValue(createMockResponse({}, 401));
+
+        try {
+            await client.listProjects();
+            expect.fail('Should have thrown');
+        } catch (err) {
+            expect(err).toBeInstanceOf(ApiError);
+            expect((err as ApiError).status).toBe(401);
+        }
+    });
+
+    it('throws ApiError on 422 with body', async () => {
+        const errorBody = { message: 'Validation failed', errors: { base_url: ['Required'] } };
+        vi.mocked(fetch).mockResolvedValue(createMockResponse(errorBody, 422));
+
+        try {
+            await client.listProjects();
+            expect.fail('Should have thrown');
+        } catch (err) {
+            expect(err).toBeInstanceOf(ApiError);
+            expect((err as ApiError).status).toBe(422);
+            expect((err as ApiError).body).toEqual(errorBody);
+        }
     });
 });
