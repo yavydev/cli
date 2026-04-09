@@ -22,10 +22,7 @@ describe('extractUniqueOrgs', () => {
     });
 
     it('returns single org when all projects belong to one', () => {
-        const projects = [
-            { organization: { name: 'Solo', slug: 'solo' } },
-            { organization: { name: 'Solo', slug: 'solo' } },
-        ];
+        const projects = [{ organization: { name: 'Solo', slug: 'solo' } }, { organization: { name: 'Solo', slug: 'solo' } }];
 
         const orgs = extractUniqueOrgs(projects);
 
@@ -42,9 +39,7 @@ describe('resolveOrg', () => {
     });
 
     it('auto-selects when user has exactly one org', async () => {
-        const projects = [
-            { organization: { name: 'Solo Org', slug: 'solo-org' } },
-        ] as never[];
+        const projects = [{ organization: { name: 'Solo Org', slug: 'solo-org' } }] as never[];
 
         const result = await resolveOrg(projects, undefined);
 
@@ -52,10 +47,7 @@ describe('resolveOrg', () => {
     });
 
     it('returns empty slug with orgs list when multiple orgs exist', async () => {
-        const projects = [
-            { organization: { name: 'Org A', slug: 'org-a' } },
-            { organization: { name: 'Org B', slug: 'org-b' } },
-        ] as never[];
+        const projects = [{ organization: { name: 'Org A', slug: 'org-a' } }, { organization: { name: 'Org B', slug: 'org-b' } }] as never[];
 
         const result = await resolveOrg(projects, undefined);
 

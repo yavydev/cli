@@ -96,8 +96,6 @@ describe('buildCreateProjectPayload', () => {
     });
 
     it('throws when neither --url nor --github is provided', () => {
-        expect(() => buildCreateProjectPayload({})).toThrow(
-            'Either --url or --github is required.',
-        );
+        expect(() => buildCreateProjectPayload({})).toThrow('Either --url or --github is required.');
     });
 });

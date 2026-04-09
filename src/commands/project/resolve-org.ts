@@ -14,10 +14,7 @@ export function extractUniqueOrgs(projects: Array<{ organization: OrganizationIn
     return orgs;
 }
 
-export async function resolveOrg(
-    projects: ApiProject[],
-    orgFlag: string | undefined,
-): Promise<{ slug: string; orgs: OrganizationInfo[] }> {
+export async function resolveOrg(projects: ApiProject[], orgFlag: string | undefined): Promise<{ slug: string; orgs: OrganizationInfo[] }> {
     if (orgFlag) {
         return { slug: orgFlag, orgs: [] };
     }

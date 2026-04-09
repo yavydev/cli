@@ -46,12 +46,7 @@ function formatValidationErrors(body: unknown): string {
 }
 
 function isValidationError(body: unknown): body is ApiValidationError {
-    return (
-        typeof body === 'object' &&
-        body !== null &&
-        'errors' in body &&
-        typeof (body as ApiValidationError).errors === 'object'
-    );
+    return typeof body === 'object' && body !== null && 'errors' in body && typeof (body as ApiValidationError).errors === 'object';
 }
 
 function extractMessage(body: unknown): string {

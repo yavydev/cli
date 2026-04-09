@@ -10,10 +10,7 @@ export function needsInteractiveMode(options: CreateProjectOptions): boolean {
     return !options.url && !options.github;
 }
 
-export async function runInteractiveFlow(
-    client: YavyApiClient,
-    options: CreateProjectOptions,
-): Promise<CreateProjectOptions> {
+export async function runInteractiveFlow(client: YavyApiClient, options: CreateProjectOptions): Promise<CreateProjectOptions> {
     const source = await collectSourceFromPrompts();
     const orgSlug = await resolveOrgInteractively(client, options.org);
 
@@ -36,10 +33,7 @@ export async function collectSourceFromPrompts(): Promise<Pick<CreateProjectOpti
     return { github };
 }
 
-export async function resolveOrgInteractively(
-    client: YavyApiClient,
-    orgFlag: string | undefined,
-): Promise<string> {
+export async function resolveOrgInteractively(client: YavyApiClient, orgFlag: string | undefined): Promise<string> {
     if (orgFlag) {
         return orgFlag;
     }

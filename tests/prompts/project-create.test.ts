@@ -27,12 +27,7 @@ vi.mock('@/commands/project/resolve-org', () => ({
 
 import * as p from '@clack/prompts';
 import { resolveOrg } from '@/commands/project/resolve-org';
-import {
-    collectSourceFromPrompts,
-    needsInteractiveMode,
-    resolveOrgInteractively,
-    runInteractiveFlow,
-} from '@/prompts/project-create';
+import { collectSourceFromPrompts, needsInteractiveMode, resolveOrgInteractively, runInteractiveFlow } from '@/prompts/project-create';
 
 describe('needsInteractiveMode', () => {
     it('returns true when no source flag is provided', () => {
@@ -64,9 +59,7 @@ describe('collectSourceFromPrompts', () => {
         const result = await collectSourceFromPrompts();
 
         expect(result).toEqual({ url: 'https://docs.example.com' });
-        expect(p.select).toHaveBeenCalledWith(
-            expect.objectContaining({ message: 'What type of documentation source?' }),
-        );
+        expect(p.select).toHaveBeenCalledWith(expect.objectContaining({ message: 'What type of documentation source?' }));
     });
 
     it('prompts for owner/repo when user selects GitHub', async () => {
@@ -101,9 +94,7 @@ describe('resolveOrgInteractively', () => {
     });
 
     it('auto-selects when user has exactly one org', async () => {
-        mockClient.listProjects.mockResolvedValue([
-            { organization: { name: 'Solo Org', slug: 'solo-org' } },
-        ]);
+        mockClient.listProjects.mockResolvedValue([{ organization: { name: 'Solo Org', slug: 'solo-org' } }]);
         vi.mocked(resolveOrg).mockResolvedValue({
             slug: 'solo-org',
             orgs: [{ name: 'Solo Org', slug: 'solo-org' }],
@@ -119,10 +110,7 @@ describe('resolveOrgInteractively', () => {
             { name: 'Org A', slug: 'org-a' },
             { name: 'Org B', slug: 'org-b' },
         ];
-        mockClient.listProjects.mockResolvedValue([
-            { organization: orgs[0] },
-            { organization: orgs[1] },
-        ]);
+        mockClient.listProjects.mockResolvedValue([{ organization: orgs[0] }, { organization: orgs[1] }]);
         vi.mocked(resolveOrg).mockResolvedValue({ slug: '', orgs });
         vi.mocked(p.select).mockResolvedValueOnce('org-b');
 
@@ -144,9 +132,7 @@ describe('runInteractiveFlow', () => {
 
     it('merges prompt results with existing options', async () => {
         const mockClient = {
-            listProjects: vi.fn().mockResolvedValue([
-                { organization: { name: 'My Org', slug: 'my-org' } },
-            ]),
+            listProjects: vi.fn().mockResolvedValue([{ organization: { name: 'My Org', slug: 'my-org' } }]),
             createProject: vi.fn(),
         };
         vi.mocked(resolveOrg).mockResolvedValue({
