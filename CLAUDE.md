@@ -5,13 +5,16 @@ CLI for searching, managing, and configuring AI-ready documentation on Yavy.
 ## Commands
 
 ```bash
-pnpm install              # Install dependencies
-pnpm run build            # Build with tsup
-pnpm run dev              # Build in watch mode
-pnpm test                 # Run tests (vitest)
-pnpm run typecheck        # Type check without emitting
-pnpm run format:check     # Check formatting (prettier)
-pnpm run format           # Fix formatting
+npm install               # Install dependencies
+npm run build             # Build with tsup
+npm run dev               # Build in watch mode
+npm run check             # Run all checks (typecheck + lint + format + test)
+npm run typecheck         # TypeScript strict type checking
+npm run lint              # ESLint with typescript-eslint
+npm run lint:fix          # ESLint auto-fix
+npm run test              # Run tests (vitest)
+npm run format:check      # Check formatting (prettier)
+npm run format            # Fix formatting
 ```
 
 ## Architecture
@@ -28,6 +31,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ## Key Design Decisions
 
 - `@/` path aliases throughout (configured in tsconfig, tsup, vitest).
+- Strict TypeScript: `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`.
+- ESLint with typescript-eslint: `consistent-type-imports`, `no-floating-promises`, `no-explicit-any`.
 - Commands set `process.exitCode` instead of calling `process.exit()` directly - keeps code testable.
 - Two auth patterns coexist: OAuth (login flow) and token-based (API token via env or config file).
 - Interactive mode activates when required CLI flags are missing; flags always take precedence.

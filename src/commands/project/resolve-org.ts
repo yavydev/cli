@@ -25,7 +25,7 @@ export async function resolveOrg(projects: ApiProject[], orgFlag: string | undef
         throw new Error('No organizations found. Please specify an organization with --org <slug>.');
     }
 
-    if (orgs.length === 1) {
+    if (orgs.length === 1 && orgs[0]) {
         return { slug: orgs[0].slug, orgs };
     }
 

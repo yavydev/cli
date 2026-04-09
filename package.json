@@ -13,8 +13,11 @@
         "typecheck": "tsc --noEmit",
         "test": "vitest run",
         "test:watch": "vitest",
+        "lint": "eslint src/",
+        "lint:fix": "eslint src/ --fix",
         "format": "prettier --write \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{json,md}\"",
-        "format:check": "prettier --check \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{json,md}\""
+        "format:check": "prettier --check \"src/**/*.{ts,js}\" \"tests/**/*.{ts,js}\" \"*.{json,md}\"",
+        "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
     },
     "keywords": [
         "yavy",
@@ -44,11 +47,14 @@
         "ora": "^9.3.0"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@types/node": "^25.5.0",
         "@vitest/coverage-v8": "^4.1.0",
+        "eslint": "^10.2.0",
         "prettier": "^3.8.1",
         "tsup": "^8.5.1",
         "typescript": "^5.9.3",
+        "typescript-eslint": "^8.58.1",
         "vitest": "^4.1.0"
     },
     "engines": {

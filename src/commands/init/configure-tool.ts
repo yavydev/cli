@@ -67,7 +67,7 @@ function buildMcpUrl(projects: ApiProject[]): string {
         );
     }
 
-    return `${YAVY_BASE_URL}/mcp/${encodeURIComponent(orgSlugs[0])}`;
+    return `${YAVY_BASE_URL}/mcp/${encodeURIComponent(orgSlugs[0]!)}`;
 }
 
 function readJsonFile(configPath: string): Record<string, unknown> {

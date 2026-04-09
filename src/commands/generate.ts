@@ -22,7 +22,8 @@ export function generateCommand(): Command {
                 process.exit(1);
             }
 
-            const [orgSlug, projectSlug] = parts;
+            const orgSlug = parts[0]!;
+            const projectSlug = parts[1]!;
             const outputDir = getSkillOutputDir(projectSlug, options);
 
             if (!options.force && existsSync(join(outputDir, 'SKILL.md'))) {
