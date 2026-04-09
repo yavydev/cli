@@ -72,8 +72,8 @@ async function promptSourceType(): Promise<SourceType> {
 async function promptUrl(): Promise<string> {
     const result = await p.text({
         message: 'Documentation URL:',
-        validate: (value: string) => {
-            if (!value.trim()) {
+        validate: (value) => {
+            if (!value?.trim()) {
                 return 'URL is required.';
             }
 
@@ -98,8 +98,8 @@ async function promptUrl(): Promise<string> {
 async function promptGitHub(): Promise<string> {
     const result = await p.text({
         message: 'GitHub repository (owner/repo):',
-        validate: (value: string) => {
-            if (!value.trim()) {
+        validate: (value) => {
+            if (!value?.trim()) {
                 return 'Repository is required.';
             }
 
