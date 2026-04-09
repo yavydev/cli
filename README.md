@@ -63,6 +63,22 @@ Lists all projects you have access to across your organizations.
 | -------- | -------------- |
 | `--json` | Output as JSON |
 
+### `yavy project create`
+
+Create a new documentation project. Runs interactively when `--url` or `--github` is omitted.
+
+| Flag              | Description                              |
+| ----------------- | ---------------------------------------- |
+| `--url <url>`     | Documentation URL (web crawl source)     |
+| `--github <repo>` | GitHub repository (e.g. laravel/docs)    |
+| `--org <slug>`    | Organization slug                        |
+| `--name <name>`   | Project name (auto-generated if omitted) |
+| `--public`        | Make project public (default)            |
+| `--private`       | Make project private                     |
+| `--branch <name>` | GitHub branch override                   |
+| `--docs-path <p>` | GitHub docs path                         |
+| `--no-sync`       | Skip initial auto-sync                   |
+
 ### `yavy generate <org/project>`
 
 Downloads a skill from a project's indexed documentation.

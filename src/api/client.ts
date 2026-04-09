@@ -1,6 +1,22 @@
 import { getAccessToken } from '@/auth/store';
 import { MAX_RETRIES, REQUEST_TIMEOUT_MS, YAVY_BASE_URL, YAVY_USER_AGENT } from '@/config';
 
+export class ApiError extends Error {
+    constructor(
+        public readonly status: number,
+        public readonly body: unknown,
+        message?: string,
+    ) {
+        super(message ?? `API request failed with status ${status}`);
+        this.name = 'ApiError';
+    }
+}
+
+export interface OrganizationInfo {
+    name: string;
+    slug: string;
+}
+
 export interface ProjectContext {
     product: string | null;
     type: string | null;
@@ -21,14 +37,17 @@ export interface ApiProject {
     name: string;
     slug: string;
     description: string | null;
-    organization: {
-        name: string;
-        slug: string;
-    };
+    organization: OrganizationInfo;
     pages_count: number;
     last_indexed_at: string | null;
     has_indexed_content: boolean;
+    mcp_url: string;
     context: ProjectContext;
+}
+
+export interface ApiValidationError {
+    message: string;
+    errors: Record<string, string[]>;
 }
 
 export interface SearchResult {
@@ -112,12 +131,14 @@ export class YavyApiClient {
     }
 
     private async handleErrorResponse(response: Response): Promise<never> {
+        const body = await response.json().catch(() => ({}));
+
         if (response.status === 401) {
-            throw new Error('Authentication expired. Run `yavy login` to re-authenticate.');
+            throw new ApiError(401, body, 'Authentication expired. Run `yavy login` to re-authenticate.');
         }
 
-        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(errorData.error ?? `API request failed with status ${response.status}`);
+        const errorData = body as { error?: string };
+        throw new ApiError(response.status, body, errorData.error ?? `API request failed with status ${response.status}`);
     }
 
     private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -144,6 +165,10 @@ export class YavyApiClient {
     async listProjects(): Promise<ApiProject[]> {
         const result = await this.request<{ data: ApiProject[] }>('GET', '/projects');
         return result.data;
+    }
+
+    async createProject(orgSlug: string, payload: unknown): Promise<{ data: ApiProject }> {
+        return this.request<{ data: ApiProject }>('POST', `/${encodeURIComponent(orgSlug)}/projects`, payload);
     }
 
     async search(query: string, options?: { project?: string; limit?: number }): Promise<SearchResponse> {
